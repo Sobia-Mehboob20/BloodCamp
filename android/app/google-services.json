@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "777227338765",
+    "project_id": "bloodcamp-32504",
+    "storage_bucket": "bloodcamp-32504.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:777227338765:android:29b99d15e7b63863a84144",
+        "android_client_info": {
+          "package_name": "com.example.bloodcamp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA0HGOo6crv4Y5dwN9f4Im5E7vnEglGoag"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
