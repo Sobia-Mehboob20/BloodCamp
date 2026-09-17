@@ -1,4 +1,5 @@
 
+import 'package:bloodcamp/organizerHome.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 
@@ -22,18 +23,7 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'BloodCamp',
-      home: Scaffold(
-        appBar: AppBar(
-          title: const Text('BloodCamp'),
-        ),
-        body: const Center(
-          child: Text(
-            'Firebase Connected Successfully!',
-            style: TextStyle(fontSize: 20),
-          ),
-        ),
-      ),
-    );
+      home: const OrganizerHome(),);
   }
 }
 

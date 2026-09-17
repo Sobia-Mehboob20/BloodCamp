@@ -26,9 +26,10 @@ class _AssignStaffScreenState
           'Assign Staff',
           style: TextStyle(
             fontWeight: FontWeight.bold,
+           color:  const Color(0xFF1565C0),
           ),
         ),
-        backgroundColor: const Color(0xFF183769),
+        backgroundColor: const Color(0xFF1565C0),
         foregroundColor: Colors.white,
       ),
 
@@ -44,7 +45,7 @@ class _AssignStaffScreenState
               style: TextStyle(
                 fontSize: 17,
                 fontWeight: FontWeight.bold,
-                color: Color(0xFF183769),
+                color: const Color(0xFF1565C0),
               ),
             ),
 
@@ -113,7 +114,7 @@ class _AssignStaffScreenState
               style: TextStyle(
                 fontSize: 17,
                 fontWeight: FontWeight.bold,
-                color: Color(0xFF183769),
+                color:const Color(0xFF1565C0),
               ),
             ),
 
@@ -182,7 +183,7 @@ class _AssignStaffScreenState
                           value: isSelected,
 
                           activeColor:
-                              const Color(0xFF183769),
+                             const Color(0xFF1565C0),
 
                           onChanged: (value) {
                             setState(() {
@@ -212,7 +213,7 @@ class _AssignStaffScreenState
                             child: Icon(
                               Icons.person,
                               color:
-                                  Color(0xFF183769),
+                                  const Color(0xFF1565C0),
                             ),
                           ),
                         ),
@@ -232,7 +233,7 @@ class _AssignStaffScreenState
                 onPressed: _assignStaff,
                 style: ElevatedButton.styleFrom(
                   backgroundColor:
-                      const Color(0xFF183769),
+                     const Color(0xFF1565C0),
                   foregroundColor: Colors.white,
                   shape: RoundedRectangleBorder(
                     borderRadius:
