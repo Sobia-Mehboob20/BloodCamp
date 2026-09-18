@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'organizerHome.dart';
 
 class ReportsScreen extends StatefulWidget {
   const ReportsScreen({super.key});
@@ -378,7 +379,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
         months[now.month - 1];
 
     return Scaffold(
-    appBar: AppBar(
+  appBar: AppBar(
   title: const Text(
     'Reports',
     style: TextStyle(
@@ -389,6 +390,17 @@ class _ReportsScreenState extends State<ReportsScreen> {
   backgroundColor: const Color(0xFF1565C0),
   iconTheme: const IconThemeData(
     color: Colors.white,
+  ),
+  leading: IconButton(
+    icon: const Icon(Icons.arrow_back),
+    onPressed: () {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (context) => const OrganizerHome(),
+        ),
+      );
+    },
   ),
 ),
 

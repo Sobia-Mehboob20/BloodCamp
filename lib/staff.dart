@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'assignStaff.dart';
+import 'organizerHome.dart';
 
 class StaffScreen extends StatelessWidget {
   const StaffScreen({super.key});
@@ -12,17 +13,29 @@ class StaffScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: const Color(0xFFF7F8FA),
 
-      appBar: AppBar(
-        backgroundColor: primaryBlue,
-        foregroundColor: Colors.white,
-        elevation: 0,
-        title: const Text(
-          'Staff',
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-          ),
+      appBar:AppBar(
+  title: const Text('Staff' ,
+  style: TextStyle(
+      color: Colors.white,
+    ), ),
+    centerTitle: true,
+  backgroundColor: const Color(0xFF1565C0),
+  
+  leading: IconButton(
+    icon: const Icon(Icons.arrow_back),
+    onPressed: () {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (context) => const OrganizerHome(),
         ),
-      ),
+      );
+    },
+  ),
+),
+       
+      
+      
 
       body: StreamBuilder<QuerySnapshot>(
         stream: FirebaseFirestore.instance

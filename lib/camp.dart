@@ -1,7 +1,7 @@
-import 'package:bloodcamp/createcamp.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'createcamp.dart';
+import 'organizerHome.dart';
 
 class CampsScreen extends StatefulWidget {
   const CampsScreen({super.key});
@@ -13,17 +13,38 @@ class CampsScreen extends StatefulWidget {
 class _CampsScreenState extends State<CampsScreen> {
   int selectedTab = 0;
 
-  Future<void> _editCamp(String campId, Map<String, dynamic> data) async {
+  final List<String> tabs = [
+    'Upcoming',
+    'Today',
+    'Past',
+  ];
+
+  // --------------------------------------------------
+  // EDIT CAMP
+  // --------------------------------------------------
+  Future<void> _editCamp(
+    String campId,
+    Map<String, dynamic> data,
+  ) async {
     await Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) =>
-            CreateCampScreen(campId: campId, initialData: data, isEdit: true),
+        builder: (context) => CreateCampScreen(
+          campId: campId,
+          initialData: data,
+          isEdit: true,
+        ),
       ),
     );
   }
 
-  Future<void> _cancelCamp(String campId, Map<String, dynamic> data) async {
+  // --------------------------------------------------
+  // CANCEL CAMP
+  // --------------------------------------------------
+  Future<void> _cancelCamp(
+    String campId,
+    Map<String, dynamic> data,
+  ) async {
     final reasonController = TextEditingController();
 
     final reason = await showDialog<String>(
@@ -31,14 +52,17 @@ class _CampsScreenState extends State<CampsScreen> {
       builder: (context) {
         return AlertDialog(
           title: const Text('Cancel Camp'),
+
           content: TextField(
             controller: reasonController,
             maxLines: 3,
+
             decoration: const InputDecoration(
               hintText: 'Enter cancellation reason',
               border: OutlineInputBorder(),
             ),
           ),
+
           actions: [
             TextButton(
               onPressed: () {
@@ -46,10 +70,14 @@ class _CampsScreenState extends State<CampsScreen> {
               },
               child: const Text('CLOSE'),
             ),
+
             ElevatedButton(
               onPressed: () {
                 if (reasonController.text.trim().isNotEmpty) {
-                  Navigator.pop(context, reasonController.text.trim());
+                  Navigator.pop(
+                    context,
+                    reasonController.text.trim(),
+                  );
                 }
               },
               child: const Text('CANCEL CAMP'),
@@ -62,123 +90,133 @@ class _CampsScreenState extends State<CampsScreen> {
     if (reason == null) return;
 
     try {
-      await FirebaseFirestore.instance.collection('camps').doc(campId).update({
+      // --------------------------------------------------
+      // MARK CAMP AS CANCELLED
+      // --------------------------------------------------
+      await FirebaseFirestore.instance
+          .collection('camps')
+          .doc(campId)
+          .update({
         'isCancelled': true,
         'cancellationReason': reason,
       });
 
-// Send notification to booked donors
-final bookingsSnapshot = await FirebaseFirestore.instance
-    .collection('bookings')
-    .where('campId', isEqualTo: campId)
-    .get();
+      // --------------------------------------------------
+      // NOTIFICATION TO BOOKED DONORS
+      // --------------------------------------------------
+      final bookingsSnapshot =
+          await FirebaseFirestore.instance
+              .collection('bookings')
+              .where(
+                'campId',
+                isEqualTo: campId,
+              )
+              .get();
 
-for (final booking in bookingsSnapshot.docs) {
-  final bookingData = booking.data();
+      for (final booking in bookingsSnapshot.docs) {
+        final bookingData = booking.data();
 
-  final donorId = bookingData['donorId'];
+        final donorId = bookingData['donorId'];
 
-  if (donorId == null || donorId.toString().isEmpty) {
-    continue;
-  }
+        if (donorId == null ||
+            donorId.toString().isEmpty) {
+          continue;
+        }
 
-  await FirebaseFirestore.instance.collection('notifications').add({
-    'userId': donorId,
-    'title': 'Camp Cancelled',
-    'message':
-        '${data['name']} has been cancelled. Reason: $reason',
-    'type': 'camp_cancelled',
-    'isRead': false,
-    'createdAt': FieldValue.serverTimestamp(),
-  });
-}
-// Send notification to assigned staff
-final staffSnapshot = await FirebaseFirestore.instance
-    .collection('users')
-    .where('role', isEqualTo: 'staff')
-    .where('assignedCampId', isEqualTo: campId)
-    .get();
+        await FirebaseFirestore.instance
+            .collection('notifications')
+            .add({
+          'userId': donorId,
+          'title': 'Camp Cancelled',
+          'message':
+              '${data['name']} has been cancelled. Reason: $reason',
+          'type': 'camp_cancelled',
+          'isRead': false,
+          'createdAt':
+              FieldValue.serverTimestamp(),
+        });
+      }
 
-for (final staff in staffSnapshot.docs) {
-  await FirebaseFirestore.instance.collection('notifications').add({
-    'userId': staff.id,
-    'title': 'Camp Cancelled',
-    'message':
-        '${data['name']} has been cancelled. Reason: $reason',
-    'type': 'camp_cancelled',
-    'isRead': false,
-    'createdAt': FieldValue.serverTimestamp(),
-  });
-}
+      // --------------------------------------------------
+      // NOTIFICATION TO ASSIGNED STAFF
+      // --------------------------------------------------
+      final staffSnapshot =
+          await FirebaseFirestore.instance
+              .collection('users')
+              .where(
+                'role',
+                isEqualTo: 'staff',
+              )
+              .where(
+                'assignedCampId',
+                isEqualTo: campId,
+              )
+              .get();
+
+      for (final staff in staffSnapshot.docs) {
+        await FirebaseFirestore.instance
+            .collection('notifications')
+            .add({
+          'userId': staff.id,
+          'title': 'Camp Cancelled',
+          'message':
+              '${data['name']} has been cancelled. Reason: $reason',
+          'type': 'camp_cancelled',
+          'isRead': false,
+          'createdAt':
+              FieldValue.serverTimestamp(),
+        });
+      }
 
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Camp cancelled successfully!')),
+        const SnackBar(
+          content: Text(
+            'Camp cancelled successfully!',
+          ),
+        ),
       );
     } catch (e) {
       if (!mounted) return;
 
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Error: $e')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error: $e'),
+        ),
+      );
     }
   }
 
-  final List<String> tabs = ['Upcoming', 'Today', 'Past'];
-
-  // Convert Firestore date into DateTime
-  // Supports:
-  // 12/12/2025
-  // 12 Dec 2025
-  // 12 dec 2025
-  DateTime? parseCampDate(String dateString) {
+  // --------------------------------------------------
+  // CONVERT FIRESTORE DATE TO DATETIME
+  // --------------------------------------------------
+  DateTime? parseCampDate(dynamic date) {
     try {
-      final cleanDate = dateString.trim();
-
-      // Format: 12/12/2025
-      if (cleanDate.contains('/')) {
-        final parts = cleanDate.split('/');
-
-        if (parts.length == 3) {
-          final day = int.parse(parts[0]);
-          final month = int.parse(parts[1]);
-          final year = int.parse(parts[2]);
-
-          return DateTime(year, month, day);
-        }
+      // Firestore Timestamp
+      if (date is Timestamp) {
+        return date.toDate();
       }
 
-      // Format: 12 Dec 2025
-      final parts = cleanDate.split(' ');
+      // DateTime
+      if (date is DateTime) {
+        return date;
+      }
 
-      if (parts.length == 3) {
-        final day = int.parse(parts[0]);
+      // Old String dates
+      if (date is String) {
+        // Format: 25/9/2026
+        final parts = date.split('/');
 
-        final monthNames = {
-          'jan': 1,
-          'feb': 2,
-          'mar': 3,
-          'apr': 4,
-          'may': 5,
-          'jun': 6,
-          'jul': 7,
-          'aug': 8,
-          'sep': 9,
-          'oct': 10,
-          'nov': 11,
-          'dec': 12,
-        };
-
-        final month = monthNames[parts[1].toLowerCase()];
-
-        if (month == null) {
-          return null;
+        if (parts.length == 3) {
+          return DateTime(
+            int.parse(parts[2]),
+            int.parse(parts[1]),
+            int.parse(parts[0]),
+          );
         }
 
-        final year = int.parse(parts[2]);
-
-        return DateTime(year, month, day);
+        return DateTime.tryParse(date);
       }
 
       return null;
@@ -187,9 +225,11 @@ for (final staff in staffSnapshot.docs) {
     }
   }
 
-  // Automatically decide camp status from date
-  String getCampStatus(String dateString) {
-    final campDate = parseCampDate(dateString);
+  // --------------------------------------------------
+  // GET CAMP STATUS
+  // --------------------------------------------------
+  String getCampStatus(dynamic date) {
+    final campDate = parseCampDate(date);
 
     if (campDate == null) {
       return 'unknown';
@@ -201,7 +241,11 @@ for (final staff in staffSnapshot.docs) {
       DateTime.now().day,
     );
 
-    final campDay = DateTime(campDate.year, campDate.month, campDate.day);
+    final campDay = DateTime(
+      campDate.year,
+      campDate.month,
+      campDate.day,
+    );
 
     if (campDay.isBefore(today)) {
       return 'past';
@@ -214,28 +258,83 @@ for (final staff in staffSnapshot.docs) {
     return 'upcoming';
   }
 
+  // --------------------------------------------------
+  // BUILD
+  // --------------------------------------------------
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      // --------------------------------------------------
+      // APP BAR
+      // --------------------------------------------------
       appBar: AppBar(
-        title: const Text('Camps', style: TextStyle(color: Colors.white)),
+        title: const Text(
+          'Camps',
+          style: TextStyle(
+            color: Colors.white,
+          ),
+        ),
+
         centerTitle: true,
-        backgroundColor: const Color(0xFF1565C0),
-        iconTheme: const IconThemeData(color: Colors.white),
+
+        backgroundColor:
+            const Color(0xFF1565C0),
+
+        iconTheme: const IconThemeData(
+          color: Colors.white,
+        ),
+
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+
+          onPressed: () {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                builder: (context) =>
+                    const OrganizerHome(),
+              ),
+            );
+          },
+        ),
       ),
 
+      // --------------------------------------------------
+      // BODY
+      // --------------------------------------------------
       body: Column(
         children: [
-          // TOP TABS
+          // --------------------------------------------------
+          // TABS
+          // --------------------------------------------------
           Row(
             children: [
-              Expanded(child: _buildTab(0, 'Upcoming')),
-              Expanded(child: _buildTab(1, 'Today')),
-              Expanded(child: _buildTab(2, 'Past')),
+              Expanded(
+                child: _buildTab(
+                  0,
+                  'Upcoming',
+                ),
+              ),
+
+              Expanded(
+                child: _buildTab(
+                  1,
+                  'Today',
+                ),
+              ),
+
+              Expanded(
+                child: _buildTab(
+                  2,
+                  'Past',
+                ),
+              ),
             ],
           ),
 
+          // --------------------------------------------------
           // CAMPS LIST
+          // --------------------------------------------------
           Expanded(
             child: StreamBuilder<QuerySnapshot>(
               stream: FirebaseFirestore.instance
@@ -243,80 +342,114 @@ for (final staff in staffSnapshot.docs) {
                   .snapshots(),
 
               builder: (context, snapshot) {
-                // Loading
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-
-                // Error
-                if (snapshot.hasError) {
-                  return Center(child: Text('Error: ${snapshot.error}'));
-                }
-
-                // No data
-                if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                // LOADING
+                if (snapshot.connectionState ==
+                    ConnectionState.waiting) {
                   return const Center(
+                    child:
+                        CircularProgressIndicator(),
+                  );
+                }
+
+                // ERROR
+                if (snapshot.hasError) {
+                  return Center(
                     child: Text(
-                      'No camps found',
-                      style: TextStyle(fontSize: 18),
+                      'Error: ${snapshot.error}',
                     ),
                   );
                 }
 
-                // Get ALL camps
-                final allCamps = snapshot.data!.docs;
+                // NO DATA
+                if (!snapshot.hasData ||
+                    snapshot.data!.docs.isEmpty) {
+                  return const Center(
+                    child: Text(
+                      'No camps found',
+                      style: TextStyle(
+                        fontSize: 18,
+                      ),
+                    ),
+                  );
+                }
 
-                // Filter camps according to selected tab
-                final filteredCamps = allCamps.where((camp) {
-                  final data = camp.data() as Map<String, dynamic>;
+                // ALL CAMPS
+                final allCamps =
+                    snapshot.data!.docs;
+
+                // FILTER CAMPS
+                final filteredCamps =
+                    allCamps.where((camp) {
+                  final data =
+                      camp.data()
+                          as Map<String, dynamic>;
 
                   final date = data['date'];
-                  if (data['isCancelled'] == true) {
+
+                  // Hide cancelled camps
+                  if (data['isCancelled'] ==
+                      true) {
                     return false;
                   }
 
+                  // Skip camp without date
                   if (date == null) {
                     return false;
                   }
 
-                  // Calculate status from DATE
-                  final campStatus = getCampStatus(date.toString());
+                  final campStatus =
+                      getCampStatus(date);
 
-                  // Upcoming
+                  // UPCOMING
                   if (selectedTab == 0) {
-                    return campStatus == 'upcoming';
+                    return campStatus ==
+                        'upcoming';
                   }
 
-                  // Today
+                  // TODAY
                   if (selectedTab == 1) {
-                    return campStatus == 'today';
+                    return campStatus ==
+                        'today';
                   }
 
-                  // Past
+                  // PAST
                   return campStatus == 'past';
                 }).toList();
 
-                // No camps in selected category
+                // NO CAMPS IN TAB
                 if (filteredCamps.isEmpty) {
                   return Center(
                     child: Text(
                       'No ${tabs[selectedTab].toLowerCase()} camps',
-                      style: const TextStyle(fontSize: 18),
+                      style:
+                          const TextStyle(
+                        fontSize: 18,
+                      ),
                     ),
                   );
                 }
 
-                // Display camps
+                // DISPLAY CAMPS
                 return ListView.builder(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: filteredCamps.length,
+                  padding:
+                      const EdgeInsets.all(16),
 
-                  itemBuilder: (context, index) {
-                    final camp = filteredCamps[index];
+                  itemCount:
+                      filteredCamps.length,
 
-                    final data = camp.data() as Map<String, dynamic>;
+                  itemBuilder:
+                      (context, index) {
+                    final camp =
+                        filteredCamps[index];
 
-                    return _buildCampCard(camp.id, data);
+                    final data =
+                        camp.data()
+                            as Map<String, dynamic>;
+
+                    return _buildCampCard(
+                      camp.id,
+                      data,
+                    );
                   },
                 );
               },
@@ -325,12 +458,18 @@ for (final staff in staffSnapshot.docs) {
         ],
       ),
 
+      // --------------------------------------------------
       // ADD CAMP BUTTON
-      floatingActionButton: FloatingActionButton(
+      // --------------------------------------------------
+      floatingActionButton:
+          FloatingActionButton(
         onPressed: () async {
           await Navigator.push(
             context,
-            MaterialPageRoute(builder: (context) => const CreateCampScreen()),
+            MaterialPageRoute(
+              builder: (context) =>
+                  const CreateCampScreen(),
+            ),
           );
         },
 
@@ -339,9 +478,15 @@ for (final staff in staffSnapshot.docs) {
     );
   }
 
+  // --------------------------------------------------
   // TAB DESIGN
-  Widget _buildTab(int index, String title) {
-    final bool isSelected = selectedTab == index;
+  // --------------------------------------------------
+  Widget _buildTab(
+    int index,
+    String title,
+  ) {
+    final bool isSelected =
+        selectedTab == index;
 
     return GestureDetector(
       onTap: () {
@@ -351,14 +496,19 @@ for (final staff in staffSnapshot.docs) {
       },
 
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 16),
+        padding:
+            const EdgeInsets.symmetric(
+          vertical: 16,
+        ),
 
         decoration: BoxDecoration(
           border: Border(
             bottom: BorderSide(
               width: 3,
 
-              color: isSelected ? Colors.blue : Colors.transparent,
+              color: isSelected
+                  ? Colors.blue
+                  : Colors.transparent,
             ),
           ),
         ),
@@ -370,9 +520,13 @@ for (final staff in staffSnapshot.docs) {
             style: TextStyle(
               fontSize: 16,
 
-              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+              fontWeight: isSelected
+                  ? FontWeight.bold
+                  : FontWeight.normal,
 
-              color: isSelected ? Colors.blue : Colors.grey,
+              color: isSelected
+                  ? Colors.blue
+                  : Colors.grey,
             ),
           ),
         ),
@@ -380,139 +534,280 @@ for (final staff in staffSnapshot.docs) {
     );
   }
 
+  // --------------------------------------------------
   // CAMP CARD
-  Widget _buildCampCard(String campId, Map<String, dynamic> data) {
+  // --------------------------------------------------
+  Widget _buildCampCard(
+    String campId,
+    Map<String, dynamic> data,
+  ) {
+    // Convert date
+    final campDate =
+        parseCampDate(data['date']);
+
+    String displayDate = 'No Date';
+
+    if (campDate != null) {
+      displayDate =
+          '${campDate.day}/'
+          '${campDate.month}/'
+          '${campDate.year}';
+    }
+
+    // Support both field names
+    final bloodGroups =
+        data['bloodGroupNeeded'] ??
+        data['bloodGroupsNeeded'];
+
     return Card(
-      margin: const EdgeInsets.only(bottom: 14),
+      margin:
+          const EdgeInsets.only(bottom: 14),
 
       elevation: 2,
 
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding:
+            const EdgeInsets.all(16),
 
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment:
+              CrossAxisAlignment.start,
 
           children: [
+            // --------------------------------------------------
             // CAMP NAME
+            // --------------------------------------------------
             Text(
-              data['name'] ?? 'No Name',
+              data['name']?.toString() ??
+                  'No Name',
 
-              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              style: const TextStyle(
+                fontSize: 20,
+                fontWeight:
+                    FontWeight.bold,
+              ),
             ),
 
             const SizedBox(height: 12),
 
+            // --------------------------------------------------
             // LOCATION
+            // --------------------------------------------------
             Row(
               children: [
-                const Icon(Icons.location_on, size: 20),
+                const Icon(
+                  Icons.location_on,
+                  size: 20,
+                ),
 
                 const SizedBox(width: 8),
 
-                Expanded(child: Text(data['location'] ?? 'No Location')),
+                Expanded(
+                  child: Text(
+                    data['location']
+                            ?.toString() ??
+                        'No Location',
+                  ),
+                ),
               ],
             ),
 
             const SizedBox(height: 8),
 
+            // --------------------------------------------------
             // DATE
+            // --------------------------------------------------
             Row(
               children: [
-                const Icon(Icons.calendar_month, size: 20),
+                const Icon(
+                  Icons.calendar_month,
+                  size: 20,
+                ),
 
                 const SizedBox(width: 8),
 
-                Text(data['date'] ?? 'No Date'),
+                Text(displayDate),
               ],
             ),
 
             const SizedBox(height: 8),
 
+            // --------------------------------------------------
             // START TIME
+            // --------------------------------------------------
             Row(
               children: [
-                const Icon(Icons.access_time, size: 20),
+                const Icon(
+                  Icons.access_time,
+                  size: 20,
+                ),
 
                 const SizedBox(width: 8),
 
-                Text(data['startTime'] ?? 'No Start Time'),
+                Text(
+                  data['startTime']
+                          ?.toString() ??
+                      'No Start Time',
+                ),
               ],
             ),
 
             const SizedBox(height: 8),
 
+            // --------------------------------------------------
             // END TIME
+            // --------------------------------------------------
             if (data['endTime'] != null)
               Row(
                 children: [
-                  const Icon(Icons.schedule, size: 20),
+                  const Icon(
+                    Icons.schedule,
+                    size: 20,
+                  ),
 
                   const SizedBox(width: 8),
 
-                  Text('Ends: ${data['endTime']}'),
+                  Text(
+                    'Ends: ${data['endTime']}',
+                  ),
                 ],
               ),
 
             const SizedBox(height: 12),
 
+            // --------------------------------------------------
             // SLOT CAPACITY
-            if (data['slotCapacity'] != null)
+            // --------------------------------------------------
+            if (data['slotCapacity'] !=
+                null)
               Text(
                 'Slot Capacity: ${data['slotCapacity']}',
 
-                style: const TextStyle(fontWeight: FontWeight.w500),
+                style:
+                    const TextStyle(
+                  fontWeight:
+                      FontWeight.w500,
+                ),
               ),
 
             const SizedBox(height: 8),
 
+            // --------------------------------------------------
             // BLOOD GROUPS
-            if (data['bloodGroupsNeeded'] != null)
+            // --------------------------------------------------
+            if (bloodGroups != null)
               Text(
-                'Blood Groups: ${_formatBloodGroups(data['bloodGroupsNeeded'])}',
+                'Blood Groups: ${_formatBloodGroups(bloodGroups)}',
 
-                style: const TextStyle(fontWeight: FontWeight.w500),
+                style:
+                    const TextStyle(
+                  fontWeight:
+                      FontWeight.w500,
+                ),
               ),
 
             const SizedBox(height: 12),
 
+            // --------------------------------------------------
+            // EDIT + CANCEL
+            // --------------------------------------------------
             Visibility(
-              visible: getCampStatus(data['date']) != 'past',
+              visible:
+                  getCampStatus(
+                    data['date'],
+                  ) !=
+                      'past',
 
               child: Column(
                 children: [
-                  const SizedBox(height: 15),
+                  const SizedBox(
+                    height: 15,
+                  ),
 
+                  // EDIT BUTTON
                   SizedBox(
                     width: double.infinity,
-                    child: OutlinedButton.icon(
+
+                    child:
+                        OutlinedButton.icon(
                       onPressed: () {
-                        _editCamp(campId, data);
+                        _editCamp(
+                          campId,
+                          data,
+                        );
                       },
-                      icon: const Icon(Icons.edit),
-                      label: const Text('Edit Camp'),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: const Color(0xFF1565C0),
-                        side: const BorderSide(color: Color(0xFF1565C0)),
-                        padding: const EdgeInsets.symmetric(vertical: 12),
+
+                      icon: const Icon(
+                        Icons.edit,
+                      ),
+
+                      label: const Text(
+                        'Edit Camp',
+                      ),
+
+                      style:
+                          OutlinedButton.styleFrom(
+                        foregroundColor:
+                            const Color(
+                          0xFF1565C0,
+                        ),
+
+                        side:
+                            const BorderSide(
+                          color: Color(
+                            0xFF1565C0,
+                          ),
+                        ),
+
+                        padding:
+                            const EdgeInsets
+                                .symmetric(
+                          vertical: 12,
+                        ),
                       ),
                     ),
                   ),
 
-                  const SizedBox(height: 10),
+                  const SizedBox(
+                    height: 10,
+                  ),
 
+                  // CANCEL BUTTON
                   SizedBox(
                     width: double.infinity,
-                    child: OutlinedButton.icon(
+
+                    child:
+                        OutlinedButton.icon(
                       onPressed: () {
-                        _cancelCamp(campId, data);
+                        _cancelCamp(
+                          campId,
+                          data,
+                        );
                       },
-                      icon: const Icon(Icons.cancel),
-                      label: const Text('Cancel Camp'),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: Colors.red,
-                        side: const BorderSide(color: Colors.red),
-                        padding: const EdgeInsets.symmetric(vertical: 12),
+
+                      icon: const Icon(
+                        Icons.cancel,
+                      ),
+
+                      label: const Text(
+                        'Cancel Camp',
+                      ),
+
+                      style:
+                          OutlinedButton.styleFrom(
+                        foregroundColor:
+                            Colors.red,
+
+                        side:
+                            const BorderSide(
+                          color: Colors.red,
+                        ),
+
+                        padding:
+                            const EdgeInsets
+                                .symmetric(
+                          vertical: 12,
+                        ),
                       ),
                     ),
                   ),
@@ -525,8 +820,12 @@ for (final staff in staffSnapshot.docs) {
     );
   }
 
-  // FORMAT BLOOD GROUP LIST
-  String _formatBloodGroups(dynamic bloodGroups) {
+  // --------------------------------------------------
+  // FORMAT BLOOD GROUPS
+  // --------------------------------------------------
+  String _formatBloodGroups(
+    dynamic bloodGroups,
+  ) {
     if (bloodGroups is List) {
       return bloodGroups.join(', ');
     }

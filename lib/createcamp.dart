@@ -19,11 +19,14 @@ class CreateCampScreen extends StatefulWidget {
 }
 
 class _CreateCampScreenState extends State<CreateCampScreen> {
-  final TextEditingController titleController = TextEditingController();
+  final TextEditingController titleController =
+      TextEditingController();
 
-  final TextEditingController locationController = TextEditingController();
+  final TextEditingController locationController =
+      TextEditingController();
 
-  final TextEditingController capacityController = TextEditingController();
+  final TextEditingController capacityController =
+      TextEditingController();
 
   String? selectedDate;
   String? startTime;
@@ -49,20 +52,36 @@ class _CreateCampScreenState extends State<CreateCampScreen> {
     if (widget.isEdit && widget.initialData != null) {
       final data = widget.initialData!;
 
-      titleController.text = data['name']?.toString() ?? '';
+      titleController.text =
+          data['name']?.toString() ?? '';
 
-      locationController.text = data['location']?.toString() ?? '';
+      locationController.text =
+          data['location']?.toString() ?? '';
 
-      capacityController.text = data['slotCapacity']?.toString() ?? '';
+      capacityController.text =
+          data['slotCapacity']?.toString() ?? '';
 
-      selectedDate = data['date']?.toString();
+      // Existing Firestore Timestamp date
+      if (data['date'] is Timestamp) {
+        final date = (data['date'] as Timestamp).toDate();
 
-      startTime = data['startTime']?.toString();
+        selectedDate =
+            '${date.day}/${date.month}/${date.year}';
+      } else {
+        selectedDate = data['date']?.toString();
+      }
 
-      endTime = data['endTime']?.toString();
+      startTime =
+          data['startTime']?.toString();
+
+      endTime =
+          data['endTime']?.toString();
 
       if (data['bloodGroupsNeeded'] is List) {
-        selectedBloodGroups = List<String>.from(data['bloodGroupsNeeded']);
+        selectedBloodGroups =
+            List<String>.from(
+          data['bloodGroupsNeeded'],
+        );
       }
     }
   }
@@ -78,34 +97,57 @@ class _CreateCampScreenState extends State<CreateCampScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(widget.isEdit ? 'Edit Camp' : 'Create Camp')),
+      appBar: AppBar(
+        title: Text(
+          widget.isEdit
+              ? 'Edit Camp'
+              : 'Create Camp',
+          style: const TextStyle(
+            color: Colors.white,
+          ),
+        ),
+        centerTitle: true,
+        backgroundColor:
+            const Color(0xFF1565C0),
+      ),
 
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
 
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment:
+              CrossAxisAlignment.start,
+
           children: [
             // CAMP TITLE
             const Text(
               'Camp Title',
-              style: TextStyle(fontWeight: FontWeight.bold),
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+              ),
             ),
 
             const SizedBox(height: 8),
 
             TextField(
               controller: titleController,
-              decoration: const InputDecoration(
+              decoration:
+                  const InputDecoration(
                 hintText: 'Enter camp title',
-                border: OutlineInputBorder(),
+                border:
+                    OutlineInputBorder(),
               ),
             ),
 
             const SizedBox(height: 20),
 
             // DATE
-            const Text('Date', style: TextStyle(fontWeight: FontWeight.bold)),
+            const Text(
+              'Date',
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+              ),
+            ),
 
             const SizedBox(height: 8),
 
@@ -115,14 +157,19 @@ class _CreateCampScreenState extends State<CreateCampScreen> {
               child: Container(
                 width: double.infinity,
 
-                padding: const EdgeInsets.all(16),
+                padding:
+                    const EdgeInsets.all(16),
 
                 decoration: BoxDecoration(
                   border: Border.all(),
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius:
+                      BorderRadius.circular(8),
                 ),
 
-                child: Text(selectedDate ?? 'Select Date'),
+                child: Text(
+                  selectedDate ??
+                      'Select Date',
+                ),
               ),
             ),
 
@@ -131,17 +178,23 @@ class _CreateCampScreenState extends State<CreateCampScreen> {
             // LOCATION
             const Text(
               'Location',
-              style: TextStyle(fontWeight: FontWeight.bold),
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+              ),
             ),
 
             const SizedBox(height: 8),
 
             TextField(
-              controller: locationController,
+              controller:
+                  locationController,
 
-              decoration: const InputDecoration(
-                hintText: 'Enter location',
-                border: OutlineInputBorder(),
+              decoration:
+                  const InputDecoration(
+                hintText:
+                    'Enter location',
+                border:
+                    OutlineInputBorder(),
               ),
             ),
 
@@ -150,7 +203,9 @@ class _CreateCampScreenState extends State<CreateCampScreen> {
             // START TIME
             const Text(
               'Start Time',
-              style: TextStyle(fontWeight: FontWeight.bold),
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+              ),
             ),
 
             const SizedBox(height: 8),
@@ -161,14 +216,19 @@ class _CreateCampScreenState extends State<CreateCampScreen> {
               child: Container(
                 width: double.infinity,
 
-                padding: const EdgeInsets.all(16),
+                padding:
+                    const EdgeInsets.all(16),
 
                 decoration: BoxDecoration(
                   border: Border.all(),
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius:
+                      BorderRadius.circular(8),
                 ),
 
-                child: Text(startTime ?? 'Select Start Time'),
+                child: Text(
+                  startTime ??
+                      'Select Start Time',
+                ),
               ),
             ),
 
@@ -177,7 +237,9 @@ class _CreateCampScreenState extends State<CreateCampScreen> {
             // ENDING TIME
             const Text(
               'Ending Time',
-              style: TextStyle(fontWeight: FontWeight.bold),
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+              ),
             ),
 
             const SizedBox(height: 8),
@@ -188,14 +250,19 @@ class _CreateCampScreenState extends State<CreateCampScreen> {
               child: Container(
                 width: double.infinity,
 
-                padding: const EdgeInsets.all(16),
+                padding:
+                    const EdgeInsets.all(16),
 
                 decoration: BoxDecoration(
                   border: Border.all(),
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius:
+                      BorderRadius.circular(8),
                 ),
 
-                child: Text(endTime ?? 'Select Ending Time'),
+                child: Text(
+                  endTime ??
+                      'Select Ending Time',
+                ),
               ),
             ),
 
@@ -204,19 +271,26 @@ class _CreateCampScreenState extends State<CreateCampScreen> {
             // SLOT CAPACITY
             const Text(
               'Slot Capacity',
-              style: TextStyle(fontWeight: FontWeight.bold),
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+              ),
             ),
 
             const SizedBox(height: 8),
 
             TextField(
-              controller: capacityController,
+              controller:
+                  capacityController,
 
-              keyboardType: TextInputType.number,
+              keyboardType:
+                  TextInputType.number,
 
-              decoration: const InputDecoration(
-                hintText: 'Enter slot capacity',
-                border: OutlineInputBorder(),
+              decoration:
+                  const InputDecoration(
+                hintText:
+                    'Enter slot capacity',
+                border:
+                    OutlineInputBorder(),
               ),
             ),
 
@@ -225,7 +299,9 @@ class _CreateCampScreenState extends State<CreateCampScreen> {
             // BLOOD GROUPS
             const Text(
               'Blood Groups Needed',
-              style: TextStyle(fontWeight: FontWeight.bold),
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+              ),
             ),
 
             const SizedBox(height: 8),
@@ -234,20 +310,27 @@ class _CreateCampScreenState extends State<CreateCampScreen> {
               spacing: 8,
               runSpacing: 8,
 
-              children: bloodGroups.map((group) {
-                final isSelected = selectedBloodGroups.contains(group);
+              children:
+                  bloodGroups.map((group) {
+                final isSelected =
+                    selectedBloodGroups
+                        .contains(group);
 
                 return FilterChip(
                   label: Text(group),
 
-                  selected: isSelected,
+                  selected:
+                      isSelected,
 
-                  onSelected: (selected) {
+                  onSelected:
+                      (selected) {
                     setState(() {
                       if (selected) {
-                        selectedBloodGroups.add(group);
+                        selectedBloodGroups
+                            .add(group);
                       } else {
-                        selectedBloodGroups.remove(group);
+                        selectedBloodGroups
+                            .remove(group);
                       }
                     });
                   },
@@ -257,7 +340,7 @@ class _CreateCampScreenState extends State<CreateCampScreen> {
 
             const SizedBox(height: 30),
 
-            // CREATE BUTTON
+            // CREATE / UPDATE BUTTON
             SizedBox(
               width: double.infinity,
               height: 50,
@@ -268,8 +351,14 @@ class _CreateCampScreenState extends State<CreateCampScreen> {
                 },
 
                 child: Text(
-                  widget.isEdit ? 'UPDATE CAMP' : 'CREATE CAMP',
-                  style: const TextStyle(fontSize: 16),
+                  widget.isEdit
+                      ? 'UPDATE CAMP'
+                      : 'CREATE CAMP',
+
+                  style:
+                      const TextStyle(
+                    fontSize: 16,
+                  ),
                 ),
               ),
             ),
@@ -279,90 +368,247 @@ class _CreateCampScreenState extends State<CreateCampScreen> {
     );
   }
 
-  // CREATE CAMP IN FIRESTORE
-Future<void> createCamp() async {
-  if (titleController.text.trim().isEmpty ||
-      locationController.text.trim().isEmpty ||
-      capacityController.text.trim().isEmpty ||
-      selectedDate == null ||
-      startTime == null ||
-      endTime == null ||
-      selectedBloodGroups.isEmpty) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Please fill all fields'),
-      ),
-    );
+  // ==================================================
+  // CREATE / UPDATE CAMP
+  // ==================================================
 
-    return;
-  }
+  Future<void> createCamp() async {
+    if (titleController.text
+            .trim()
+            .isEmpty ||
+        locationController.text
+            .trim()
+            .isEmpty ||
+        capacityController.text
+            .trim()
+            .isEmpty ||
+        selectedDate == null ||
+        startTime == null ||
+        endTime == null ||
+        selectedBloodGroups.isEmpty) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Please fill all fields',
+          ),
+        ),
+      );
 
-  try {
-    final campData = {
-      'name': titleController.text.trim(),
-      'location': locationController.text.trim(),
-      'date': selectedDate,
-      'startTime': startTime,
-      'endTime': endTime,
-      'slotCapacity': int.parse(
-        capacityController.text.trim(),
-      ),
-      'bloodGroupsNeeded': selectedBloodGroups,
-    };
+      return;
+    }
 
-    // EDIT EXISTING CAMP
-    if (widget.isEdit && widget.campId != null) {
-      await FirebaseFirestore.instance
-          .collection('camps')
-          .doc(widget.campId)
-          .update(campData);
+    try {
+      // Convert selected date to Firestore Timestamp
+      final dateParts =
+          selectedDate!.split('/');
 
+      final campDate = DateTime(
+        int.parse(dateParts[2]),
+        int.parse(dateParts[1]),
+        int.parse(dateParts[0]),
+      );
+
+      final campData = {
+        'name':
+            titleController.text.trim(),
+
+        'location':
+            locationController.text
+                .trim(),
+
+        'date':
+            Timestamp.fromDate(campDate),
+
+        'startTime': startTime,
+
+        'endTime': endTime,
+
+        'slotCapacity':
+            int.parse(
+          capacityController.text
+              .trim(),
+        ),
+
+        'bloodGroupsNeeded':
+            selectedBloodGroups,
+      };
+
+      // ==================================================
+      // EDIT EXISTING CAMP
+      // ==================================================
+
+      if (widget.isEdit &&
+          widget.campId != null) {
+        await FirebaseFirestore.instance
+            .collection('camps')
+            .doc(widget.campId)
+            .update(campData);
+
+        // ==================================================
+        // NOTIFICATION TO BOOKED DONORS
+        // ==================================================
+
+        final bookingsSnapshot =
+            await FirebaseFirestore
+                .instance
+                .collection('bookings')
+                .where(
+                  'campId',
+                  isEqualTo:
+                      widget.campId,
+                )
+                .get();
+
+        for (final booking
+            in bookingsSnapshot.docs) {
+          final bookingData =
+              booking.data();
+
+          final donorId =
+              bookingData['donorId'];
+
+          if (donorId == null ||
+              donorId
+                  .toString()
+                  .isEmpty) {
+            continue;
+          }
+
+          await FirebaseFirestore
+              .instance
+              .collection(
+                  'notifications')
+              .add({
+            'userId': donorId,
+
+            'title':
+                'Camp Updated',
+
+            'message':
+                '${campData['name']} has been updated. Please check the new camp details.',
+
+            'type':
+                'camp_updated',
+
+            'isRead': false,
+
+            'createdAt':
+                FieldValue
+                    .serverTimestamp(),
+          });
+        }
+
+        // ==================================================
+        // NOTIFICATION TO ASSIGNED STAFF
+        // ==================================================
+
+        final staffSnapshot =
+            await FirebaseFirestore
+                .instance
+                .collection('users')
+                .where(
+                  'role',
+                  isEqualTo: 'staff',
+                )
+                .where(
+                  'assignedCampId',
+                  isEqualTo:
+                      widget.campId,
+                )
+                .get();
+
+        for (final staff
+            in staffSnapshot.docs) {
+          await FirebaseFirestore
+              .instance
+              .collection(
+                  'notifications')
+              .add({
+            'userId': staff.id,
+
+            'title':
+                'Camp Updated',
+
+            'message':
+                '${campData['name']} has been updated. Please check the new camp details.',
+
+            'type':
+                'camp_updated',
+
+            'isRead': false,
+
+            'createdAt':
+                FieldValue
+                    .serverTimestamp(),
+          });
+        }
+
+        if (!mounted) return;
+
+        ScaffoldMessenger.of(context)
+            .showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Camp updated and notifications sent!',
+            ),
+          ),
+        );
+      }
+
+      // ==================================================
+      // CREATE NEW CAMP
+      // ==================================================
+
+      else {
+        await FirebaseFirestore.instance
+            .collection('camps')
+            .add(campData);
+
+        if (!mounted) return;
+
+        ScaffoldMessenger.of(context)
+            .showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Camp created successfully!',
+            ),
+          ),
+        );
+      }
+
+      Navigator.pop(context);
+    } catch (e) {
       if (!mounted) return;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Camp updated successfully!'),
+      ScaffoldMessenger.of(context)
+          .showSnackBar(
+        SnackBar(
+          content: Text(
+            'Error: $e',
+          ),
         ),
       );
     }
-
-    // CREATE NEW CAMP
-    else {
-      await FirebaseFirestore.instance
-          .collection('camps')
-          .add(campData);
-
-      if (!mounted) return;
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Camp created successfully!'),
-        ),
-      );
-    }
-
-    Navigator.pop(context);
-  } catch (e) {
-    if (!mounted) return;
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Error: $e'),
-      ),
-    );
   }
-}
 
+  // ==================================================
   // SELECT DATE
+  // ==================================================
+
   Future<void> selectDate() async {
-    final DateTime? pickedDate = await showDatePicker(
+    final DateTime? pickedDate =
+        await showDatePicker(
       context: context,
 
-      firstDate: DateTime.now(),
+      firstDate:
+          DateTime.now(),
 
-      lastDate: DateTime(2030),
+      lastDate:
+          DateTime(2030),
 
-      initialDate: DateTime.now(),
+      initialDate:
+          DateTime.now(),
     );
 
     if (pickedDate != null) {
@@ -375,32 +621,42 @@ Future<void> createCamp() async {
     }
   }
 
+  // ==================================================
   // SELECT START TIME
-  Future<void> selectStartTime() async {
-    final TimeOfDay? pickedTime = await showTimePicker(
-      context: context,
+  // ==================================================
 
-      initialTime: TimeOfDay.now(),
+  Future<void> selectStartTime() async {
+    final TimeOfDay? pickedTime =
+        await showTimePicker(
+      context: context,
+      initialTime:
+          TimeOfDay.now(),
     );
 
     if (pickedTime != null) {
       setState(() {
-        startTime = pickedTime.format(context);
+        startTime =
+            pickedTime.format(context);
       });
     }
   }
 
+  // ==================================================
   // SELECT END TIME
-  Future<void> selectEndTime() async {
-    final TimeOfDay? pickedTime = await showTimePicker(
-      context: context,
+  // ==================================================
 
-      initialTime: TimeOfDay.now(),
+  Future<void> selectEndTime() async {
+    final TimeOfDay? pickedTime =
+        await showTimePicker(
+      context: context,
+      initialTime:
+          TimeOfDay.now(),
     );
 
     if (pickedTime != null) {
       setState(() {
-        endTime = pickedTime.format(context);
+        endTime =
+            pickedTime.format(context);
       });
     }
   }
