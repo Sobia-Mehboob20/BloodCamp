@@ -1,7 +1,9 @@
-import 'dart:io';
+import 'dart:convert';
+import 'dart:typed_data';
+import 'organizerHome.dart';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
@@ -17,7 +19,10 @@ class _OrganizerProfileState extends State<OrganizerProfile> {
 
   bool isUploading = false;
 
-  // Pick image and upload to Firebase Storage
+  // ============================================================
+  // PICK PROFILE PHOTO + SAVE AS BASE64 IN FIRESTORE
+  // ============================================================
+
   Future<void> uploadProfilePhoto() async {
     if (currentUser == null) return;
 
@@ -25,6 +30,7 @@ class _OrganizerProfileState extends State<OrganizerProfile> {
 
     final XFile? image = await picker.pickImage(
       source: ImageSource.gallery,
+      imageQuality: 70,
     );
 
     if (image == null) return;
@@ -34,33 +40,24 @@ class _OrganizerProfileState extends State<OrganizerProfile> {
     });
 
     try {
-      final File file = File(image.path);
+      // Read selected image as bytes
+      final Uint8List imageBytes = await image.readAsBytes();
 
-      // Firebase Storage location
-      final storageRef = FirebaseStorage.instance
-          .ref()
-          .child('profile_photos')
-          .child('${currentUser!.uid}.jpg');
+      // Convert image bytes to Base64
+      final String base64Image = base64Encode(imageBytes);
 
-      // Upload image
-      await storageRef.putFile(file);
-
-      // Get image URL
-      final String photoUrl =
-          await storageRef.getDownloadURL();
-
-      // Save URL in Firestore
+      // Save Base64 image in Firestore
       await FirebaseFirestore.instance
           .collection('users')
           .doc(currentUser!.uid)
           .update({
-        'photoUrl': photoUrl,
+        'profileImage': base64Image,
       });
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Profile photo uploaded'),
+            content: Text('Profile photo updated'),
           ),
         );
       }
@@ -68,7 +65,7 @@ class _OrganizerProfileState extends State<OrganizerProfile> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Upload failed: $e'),
+            content: Text('Failed to update photo: $e'),
           ),
         );
       }
@@ -93,8 +90,29 @@ class _OrganizerProfileState extends State<OrganizerProfile> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Organizer Profile'),
-      ),
+  title: const Text(
+    'Profile',
+    style: TextStyle(
+      color: Colors.white,
+    ),
+  ),
+  centerTitle: true,
+  backgroundColor: const Color(0xFF1565C0),
+  iconTheme: const IconThemeData(
+    color: Colors.white,
+  ),
+  leading: IconButton(
+    icon: const Icon(Icons.arrow_back),
+    onPressed: () {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (context) => const OrganizerHome(),
+        ),
+      );
+    },
+  ),
+),
 
       body: StreamBuilder<DocumentSnapshot>(
         stream: FirebaseFirestore.instance
@@ -103,15 +121,13 @@ class _OrganizerProfileState extends State<OrganizerProfile> {
             .snapshots(),
 
         builder: (context, snapshot) {
-          if (snapshot.connectionState ==
-              ConnectionState.waiting) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(
               child: CircularProgressIndicator(),
             );
           }
 
-          if (!snapshot.hasData ||
-              !snapshot.data!.exists) {
+          if (!snapshot.hasData || !snapshot.data!.exists) {
             return const Center(
               child: Text('Profile not found'),
             );
@@ -120,15 +136,8 @@ class _OrganizerProfileState extends State<OrganizerProfile> {
           final data =
               snapshot.data!.data() as Map<String, dynamic>;
 
-          final String name = data['name'] ?? '';
-          final String phone = data['phone'] ?? '';
-          final String city = data['city'] ?? '';
-          final String bloodGroup =
-              data['bloodGroup'] ?? '';
-          final String lastDonationDate =
-              data['lastDonationDate'] ?? '';
-          final String photoUrl =
-              data['photoUrl'] ?? '';
+          final String profileImage =
+              data['profileImage'] ?? '';
 
           return SingleChildScrollView(
             padding: const EdgeInsets.all(20),
@@ -136,7 +145,9 @@ class _OrganizerProfileState extends State<OrganizerProfile> {
             child: Column(
               children: [
 
-                // ---------------- PROFILE PHOTO ----------------
+                // ==================================================
+                // PROFILE PHOTO
+                // ==================================================
 
                 Stack(
                   children: [
@@ -144,12 +155,13 @@ class _OrganizerProfileState extends State<OrganizerProfile> {
                     CircleAvatar(
                       radius: 60,
 
-                      backgroundImage:
-                          photoUrl.isNotEmpty
-                              ? NetworkImage(photoUrl)
-                              : null,
+                      backgroundImage: profileImage.isNotEmpty
+                          ? MemoryImage(
+                              base64Decode(profileImage),
+                            )
+                          : null,
 
-                      child: photoUrl.isEmpty
+                      child: profileImage.isEmpty
                           ? const Icon(
                               Icons.person,
                               size: 60,
@@ -173,8 +185,7 @@ class _OrganizerProfileState extends State<OrganizerProfile> {
                               ? const SizedBox(
                                   height: 18,
                                   width: 18,
-                                  child:
-                                      CircularProgressIndicator(
+                                  child: CircularProgressIndicator(
                                     strokeWidth: 2,
                                   ),
                                 )
@@ -187,46 +198,26 @@ class _OrganizerProfileState extends State<OrganizerProfile> {
                   ],
                 ),
 
-                const SizedBox(height: 30),
+                const SizedBox(height: 35),
 
-                // ---------------- NAME ----------------
+                // ==================================================
+                // ORGANIZER
+                // ==================================================
 
                 ProfileItem(
-                  icon: Icons.person,
-                  title: 'Name',
-                  value: name,
+                  icon: Icons.admin_panel_settings,
+                  title: 'Role',
+                  value: 'Organizer',
                 ),
 
-                // ---------------- PHONE ----------------
+                // ==================================================
+                // PHONE
+                // ==================================================
 
                 ProfileItem(
                   icon: Icons.phone,
                   title: 'Phone',
-                  value: phone,
-                ),
-
-                // ---------------- CITY ----------------
-
-                ProfileItem(
-                  icon: Icons.location_city,
-                  title: 'City',
-                  value: city,
-                ),
-
-                // ---------------- BLOOD GROUP ----------------
-
-                ProfileItem(
-                  icon: Icons.bloodtype,
-                  title: 'Blood Group',
-                  value: bloodGroup,
-                ),
-
-                // ---------------- LAST DONATION ----------------
-
-                ProfileItem(
-                  icon: Icons.calendar_month,
-                  title: 'Last Donation Date',
-                  value: lastDonationDate,
+                  value: '0300-1234567',
                 ),
               ],
             ),
@@ -269,11 +260,8 @@ class ProfileItem extends StatelessWidget {
           ),
         ),
 
-        subtitle: Text(
-          value.isEmpty ? 'Not available' : value,
-        ),
+        subtitle: Text(value),
       ),
     );
   }
 }
-

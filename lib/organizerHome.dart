@@ -122,7 +122,7 @@ class HomeContent extends StatelessWidget {
 
           const UpcomingCampCard(),
 
-          const SizedBox(height: 25),
+          const SizedBox(height: 55),
 
           // ================= DEMO DATA =================
           const Text(
@@ -232,13 +232,17 @@ class TodayCampCard extends StatelessWidget {
     final now = DateTime.now();
 
     return StreamBuilder<QuerySnapshot>(
-      stream: FirebaseFirestore.instance.collection('camps').snapshots(),
+      stream: FirebaseFirestore.instance
+          .collection('camps')
+          .snapshots(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Card(
             child: Padding(
               padding: EdgeInsets.all(20),
-              child: Center(child: CircularProgressIndicator()),
+              child: Center(
+                child: CircularProgressIndicator(),
+              ),
             ),
           );
         }
@@ -247,27 +251,33 @@ class TodayCampCard extends StatelessWidget {
           return Card(
             child: Padding(
               padding: const EdgeInsets.all(20),
-              child: Text('Error loading camp: ${snapshot.error}'),
+              child: Text(
+                'Error loading camp: ${snapshot.error}',
+              ),
             ),
           );
         }
 
-        QueryDocumentSnapshot<Map<String, dynamic>>? todayCamp;
+        // ================= FIND TODAY'S CAMP =================
+
+        QueryDocumentSnapshot? todayCamp;
 
         for (final document in snapshot.data?.docs ?? []) {
-          final data = document.data() as Map<String, dynamic>;
+          final data =
+              document.data() as Map<String, dynamic>;
 
           final date = parseCampDate(data['date']);
-       
 
           if (date != null &&
               date.year == now.year &&
               date.month == now.month &&
               date.day == now.day) {
-            todayCamp = document as QueryDocumentSnapshot<Map<String, dynamic>>;
+            todayCamp = document;
             break;
           }
         }
+
+        // ================= NO TODAY CAMP =================
 
         if (todayCamp == null) {
           return _noCampCard(
@@ -276,115 +286,262 @@ class TodayCampCard extends StatelessWidget {
           );
         }
 
-        final data = todayCamp.data();
+        // ================= CAMP DATA =================
 
-        return Card(
-          elevation: 3,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(15),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Today’s Camp',
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                ),
+        final camp = todayCamp!;
+        final data =
+            camp.data() as Map<String, dynamic>;
 
-                const SizedBox(height: 15),
+        // Exact Firestore document ID
+        final campId = camp.id;
 
-                Text(
-                  data['name'] ?? 'Blood Camp',
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
+        // Today's selected camp date
+        final campDate = parseCampDate(data['date']);
+
+        // ================= BOOKINGS =================
+
+        return StreamBuilder<QuerySnapshot>(
+          stream: FirebaseFirestore.instance
+              .collection('bookings')
+              .where(
+                'campId',
+                isEqualTo: campId,
+              )
+              .snapshots(),
+          builder: (context, bookingSnapshot) {
+            if (bookingSnapshot.connectionState ==
+                ConnectionState.waiting) {
+              return const Card(
+                child: Padding(
+                  padding: EdgeInsets.all(20),
+                  child: Center(
+                    child: CircularProgressIndicator(),
                   ),
                 ),
+              );
+            }
 
-                const SizedBox(height: 8),
-
-                Row(
-                  children: [
-                    const Icon(Icons.location_on, color: Color(0xFF1565C0)),
-                    const SizedBox(width: 5),
-                    Expanded(
-                      child: Text(data['location'] ?? 'Location not available'),
-                    ),
-                  ],
+            if (bookingSnapshot.hasError) {
+              return Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: Text(
+                    'Error loading bookings: '
+                    '${bookingSnapshot.error}',
+                  ),
                 ),
+              );
+            }
 
-                const SizedBox(height: 8),
+            int bookedCount = 0;
+            int checkedInCount = 0;
+            int collectedCount = 0;
+            int deferredCount = 0;
 
-                Row(
+            // ================= COUNT BOOKINGS =================
+
+            for (final booking
+                in bookingSnapshot.data?.docs ?? []) {
+              final bookingData =
+                  booking.data() as Map<String, dynamic>;
+
+              // Booking date
+              final bookingDate =
+                  parseCampDate(bookingData['date']);
+
+              // Match BOTH campId and date
+              if (campDate == null ||
+                  bookingDate == null ||
+                  bookingDate.year != campDate.year ||
+                  bookingDate.month != campDate.month ||
+                  bookingDate.day != campDate.day) {
+                continue;
+              }
+
+              final status = bookingData['status']
+                  ?.toString()
+                  .trim()
+                  .toLowerCase();
+
+              // Upcoming = Booked
+              if (status == 'upcoming') {
+                bookedCount++;
+              }
+
+              // Checked-in
+              else if (status == 'checked-in' ||
+                  status == 'checked in') {
+                checkedInCount++;
+              }
+
+              // Collected / Completed
+              else if (status == 'collected' ||
+                  status == 'completed') {
+                collectedCount++;
+              }
+
+              // Deferred
+              else if (status == 'deferred') {
+                deferredCount++;
+              }
+            }
+
+            // ================= SEATS =================
+
+            final slotCapacity =
+                (data['slotCapacity'] as num?)?.toInt() ?? 0;
+
+            final totalBooked =
+                bookedCount +
+                checkedInCount +
+                collectedCount +
+                deferredCount;
+
+            final seatsLeft =
+                slotCapacity - totalBooked;
+
+            // ================= CARD =================
+
+            return Card(
+              elevation: 3,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(15),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment:
+                      CrossAxisAlignment.start,
                   children: [
-                    const Icon(Icons.access_time, color: Color(0xFF1565C0)),
-                    const SizedBox(width: 5),
+                    const Text(
+                      'Today’s Camp',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+
+                    const SizedBox(height: 15),
+
                     Text(
-                      '${data['startTime'] ?? 'N/A'} - '
-                      '${data['endTime'] ?? 'N/A'}',
+                      data['name']?.toString() ??
+                          'Blood Camp',
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+
+                    const SizedBox(height: 8),
+
+                    Row(
+                      children: [
+                        const Icon(
+                          Icons.location_on,
+                          color: Color(0xFF1565C0),
+                        ),
+                        const SizedBox(width: 5),
+                        Expanded(
+                          child: Text(
+                            data['location']
+                                    ?.toString() ??
+                                'Location not available',
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 8),
+
+                    Row(
+                      children: [
+                        const Icon(
+                          Icons.access_time,
+                          color: Color(0xFF1565C0),
+                        ),
+                        const SizedBox(width: 5),
+                        Text(
+                          '${data['startTime'] ?? 'N/A'} - '
+                          '${data['endTime'] ?? 'N/A'}',
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 18),
+
+                    // ================= ROW 1 =================
+
+                    Row(
+                      children: [
+                        Expanded(
+                          child: StatCard(
+                            title: 'Booked',
+                            value:
+                                bookedCount.toString(),
+                          ),
+                        ),
+
+                        const SizedBox(width: 8),
+
+                        Expanded(
+                          child: StatCard(
+                            title: 'Checked-in',
+                            value:
+                                checkedInCount.toString(),
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 8),
+
+                    // ================= ROW 2 =================
+
+                    Row(
+                      children: [
+                        Expanded(
+                          child: StatCard(
+                            title: 'Collected',
+                            value:
+                                collectedCount.toString(),
+                          ),
+                        ),
+
+                        const SizedBox(width: 8),
+
+                        Expanded(
+                          child: StatCard(
+                            title: 'Deferred',
+                            value:
+                                deferredCount.toString(),
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 8),
+
+                    // ================= SEATS LEFT =================
+
+                    Center(
+                      child: StatCard(
+                        title: 'Seats Left',
+                        value: seatsLeft < 0
+                            ? '0'
+                            : seatsLeft.toString(),
+                      ),
                     ),
                   ],
                 ),
-
-                const SizedBox(height: 18),
-
-                Row(
-                  children: [
-                    Expanded(
-                      child: StatCard(
-                        title: 'Booked',
-                        value: '${data['booked'] ?? 0}',
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: StatCard(
-                        title: 'Checked-in',
-                        value: '${data['checkedIn'] ?? 0}',
-                      ),
-                    ),
-                  ],
-                ),
-
-                const SizedBox(height: 8),
-
-               Row(
-  children: [
-    Expanded(
-      child: StatCard(
-        title: 'Collected',
-        value: '${data['collected'] ?? 0}',
-      ),
-    ),
-    const SizedBox(width: 8),
-    Expanded(
-      child: StatCard(
-        title: 'Deferred',
-        value: '${data['deferred'] ?? 0}',
-      ),
-    ),
-  ],
-),
-
-const SizedBox(height: 8),
-
-Center(
- child: StatCard(
-  title: 'Seats Left',
-  value:
-      '${((data['slotCapacity'] ?? 0) as num) - ((data['booked'] ?? 0) as num)}',
-),
-)
-              ],
-            ),
-          ),
+              ),
+            );
+          },
         );
       },
     );
   }
 }
+
 
 // ================= STAT CARD =================
 
