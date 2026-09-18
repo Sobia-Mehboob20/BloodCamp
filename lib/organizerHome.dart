@@ -107,6 +107,9 @@ class HomeContent extends StatelessWidget {
           'Hello Organizer',
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
+
+
+
         backgroundColor: const Color(0xFF1565C0),
         foregroundColor: Colors.white,
       ),
