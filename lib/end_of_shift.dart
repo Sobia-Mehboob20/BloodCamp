@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'staff_shifts_firestore.dart';
 
@@ -14,7 +14,11 @@ class _EndOfShiftScreenState extends State<EndOfShiftScreen> {
 
   final FirebaseFirestore firestore = FirebaseFirestore.instance;
 
-  final String campId = 'camp001';
+  // ============================================================
+  // CURRENT CAMP
+  // ============================================================
+
+  final String campId = 'camp7';
   final String staffId = 'staff001';
 
   bool isLoading = true;
@@ -61,25 +65,37 @@ class _EndOfShiftScreenState extends State<EndOfShiftScreen> {
     });
 
     try {
+      // ==========================================================
       // BOOKINGS
+      // ==========================================================
+
       final bookingsSnapshot = await firestore
           .collection('bookings')
           .where('campId', isEqualTo: campId)
           .get();
 
+      // ==========================================================
       // WALK-IN DONORS
+      // ==========================================================
+
       final walkInSnapshot = await firestore
           .collection('walk_in_donors')
           .where('campId', isEqualTo: campId)
           .get();
 
+      // ==========================================================
       // SCREENINGS
+      // ==========================================================
+
       final screeningsSnapshot = await firestore
           .collection('screenings')
           .where('campId', isEqualTo: campId)
           .get();
 
+      // ==========================================================
       // DONATIONS
+      // ==========================================================
+
       final donationsSnapshot = await firestore
           .collection('donations')
           .where('campId', isEqualTo: campId)
@@ -103,9 +119,12 @@ class _EndOfShiftScreenState extends State<EndOfShiftScreen> {
 
       for (final doc in bookingsSnapshot.docs) {
         final data = doc.data();
-        final status = data['status']?.toString().toLowerCase() ?? '';
+
+        final status =
+            data['status']?.toString().toLowerCase().trim() ?? '';
 
         if (status.contains('checked in') ||
+            status.contains('checked_in') ||
             status.contains('screening') ||
             status.contains('passed') ||
             status.contains('deferred')) {
@@ -115,9 +134,12 @@ class _EndOfShiftScreenState extends State<EndOfShiftScreen> {
 
       for (final doc in walkInSnapshot.docs) {
         final data = doc.data();
-        final status = data['status']?.toString().toLowerCase() ?? '';
+
+        final status =
+            data['status']?.toString().toLowerCase().trim() ?? '';
 
         if (status.contains('checked in') ||
+            status.contains('checked_in') ||
             status.contains('screening') ||
             status.contains('passed') ||
             status.contains('deferred')) {
@@ -144,13 +166,14 @@ class _EndOfShiftScreenState extends State<EndOfShiftScreen> {
         }
 
         final screeningStatus =
-            data['screeningStatus']?.toString().toLowerCase() ?? '';
+            data['screeningStatus']?.toString().toLowerCase().trim() ?? '';
 
         if (screeningStatus == 'deferred') {
           deferredDonors++;
         }
 
-        if (screeningStatus == 'passed' &&
+        if ((screeningStatus == 'passed' ||
+                screeningStatus == 'screening passed') &&
             donorId != null &&
             donorId.isNotEmpty) {
           passedDonorIds.add(donorId);
@@ -173,7 +196,7 @@ class _EndOfShiftScreenState extends State<EndOfShiftScreen> {
         final data = doc.data();
 
         final donationStatus =
-            data['donationStatus']?.toString().toLowerCase() ?? '';
+            data['donationStatus']?.toString().toLowerCase().trim() ?? '';
 
         if (donationStatus == 'completed') {
           completedDonations++;
@@ -184,7 +207,7 @@ class _EndOfShiftScreenState extends State<EndOfShiftScreen> {
             donationDonorIds.add(donorId);
           }
 
-          final bloodGroup = data['bloodGroup']?.toString();
+          final bloodGroup = data['bloodGroup']?.toString().trim();
 
           if (bloodGroup != null &&
               bloodGroupCounts.containsKey(bloodGroup)) {
@@ -216,14 +239,18 @@ class _EndOfShiftScreenState extends State<EndOfShiftScreen> {
           donorId = donor.id;
         }
 
-        final status = data['status']?.toString().toLowerCase() ?? '';
+        final status =
+            data['status']?.toString().toLowerCase().trim() ?? '';
 
-        final isCheckedIn = status.contains('checked in') ||
+        final isCheckedIn =
+            status.contains('checked in') ||
+            status.contains('checked_in') ||
             status.contains('screening') ||
             status.contains('passed') ||
             status.contains('deferred');
 
-        if (isCheckedIn && !screenedDonorIds.contains(donorId)) {
+        if (isCheckedIn &&
+            !screenedDonorIds.contains(donorId)) {
           pendingScreenings++;
         }
       }
@@ -239,6 +266,10 @@ class _EndOfShiftScreenState extends State<EndOfShiftScreen> {
           pendingDonationRecords++;
         }
       }
+
+      // ==========================================================
+      // UPDATE UI
+      // ==========================================================
 
       if (mounted) {
         setState(() {
@@ -644,7 +675,7 @@ class _EndOfShiftScreenState extends State<EndOfShiftScreen> {
                             left: 12,
                             right: 8,
                             bottom: 70,
-                           ),
+                          ),
                           child: Icon(Icons.notes_outlined),
                         ),
                         border: OutlineInputBorder(
@@ -904,4 +935,4 @@ class _EndOfShiftScreenState extends State<EndOfShiftScreen> {
       ),
     );
   }
-} 
+}

@@ -16,7 +16,15 @@ class _DonorRosterScreenState extends State<DonorRosterScreen> {
 
   int selectedIndex = 1;
 
-  final String campId = 'camp001';
+  // Your actual camp document IDs
+  final List<String> campIds = [
+    'camp 3',
+    'camp 4',
+    'camp 5',
+    'camp 6',
+    'camp 7',
+  ];
+
   final String staffId = 'staff001';
 
   bool isLoading = true;
@@ -45,9 +53,11 @@ class _DonorRosterScreenState extends State<DonorRosterScreen> {
         isLoading = true;
       });
 
-      final Map<String, Map<String, dynamic>> usersMap = {};
+      // -------------------------------------------------------
+      // USERS
+      // -------------------------------------------------------
 
-      // ---------------- USERS ----------------
+      final Map<String, Map<String, dynamic>> usersMap = {};
 
       final usersSnapshot =
           await firestore.collection('users').get();
@@ -59,92 +69,165 @@ class _DonorRosterScreenState extends State<DonorRosterScreen> {
         };
       }
 
-      // ---------------- BOOKINGS ----------------
+      // -------------------------------------------------------
+      // ALL DONORS
+      // -------------------------------------------------------
 
       final List<Map<String, dynamic>> allDonors = [];
 
-      final bookingsSnapshot = await firestore
-          .collection('bookings')
-          .where('campId', isEqualTo: campId)
-          .get();
+      // -------------------------------------------------------
+      // BOOKED DONORS
+      // -------------------------------------------------------
 
-      for (final doc in bookingsSnapshot.docs) {
-        final booking = doc.data();
+      for (final currentCampId in campIds) {
+        final bookingsSnapshot = await firestore
+            .collection('bookings')
+            .where(
+              'campId',
+              isEqualTo: currentCampId,
+            )
+            .get();
 
-        final String donorId =
-            booking['donorId']?.toString() ?? '';
+        for (final doc in bookingsSnapshot.docs) {
+          final booking = doc.data();
 
-        final userData = usersMap[donorId] ?? {};
+          final String donorId =
+              booking['donorId']?.toString() ?? '';
 
-        allDonors.add({
-          'id': doc.id,
-          'documentId': doc.id,
-          'donorId': donorId,
-          'bookingId': doc.id,
-          'campId': booking['campId'] ?? campId,
-          'name':
-              booking['donorName'] ??
-              userData['name'] ??
-              'Unknown Donor',
-          'phone':
-              booking['donorPhone'] ??
-              userData['phone'] ??
-              '',
-          'email':
-              booking['donorEmail'] ??
-              userData['email'] ??
-              '',
-          'bloodGroup':
-              booking['bloodGroup'] ??
-              userData['bloodGroup'] ??
-              'N/A',
-          'city':
-              booking['city'] ??
-              userData['city'] ??
-              '',
-          'slot': booking['slot'] ?? '',
-          'date': booking['date'] ?? '',
-          'location': booking['location'] ?? '',
-          'status': booking['status'] ?? 'Booked',
-          'type': 'booking',
-          'lastDonation': userData['lastDonation'],
-        });
+          final Map<String, dynamic> userData =
+              usersMap[donorId] ?? {};
+
+          allDonors.add({
+            'id': doc.id,
+            'documentId': doc.id,
+            'donorId': donorId,
+            'bookingId': doc.id,
+
+            'campId':
+                booking['campId'] ?? currentCampId,
+
+            'name':
+                booking['donorName'] ??
+                userData['name'] ??
+                'Unknown Donor',
+
+            'phone':
+                booking['donorPhone'] ??
+                userData['phone'] ??
+                '',
+
+            'email':
+                booking['donorEmail'] ??
+                userData['email'] ??
+                '',
+
+            'bloodGroup':
+                booking['bloodGroup'] ??
+                userData['bloodGroup'] ??
+                'N/A',
+
+            'city':
+                booking['city'] ??
+                userData['city'] ??
+                '',
+
+            'slot':
+                booking['slot'] ?? '',
+
+            'date':
+                booking['date'] ?? '',
+
+            'location':
+                booking['location'] ?? '',
+
+            'campName':
+                booking['campName'] ??
+                'Blood Camp',
+
+            'status':
+                booking['status'] ??
+                'Booked',
+
+            'type': 'booking',
+
+            'lastDonation':
+                userData['lastDonation'],
+          });
+        }
       }
 
-      // ---------------- WALK-IN DONORS ----------------
+      // -------------------------------------------------------
+      // WALK-IN DONORS
+      // -------------------------------------------------------
 
-      final walkInSnapshot = await firestore
-          .collection('walk_in_donors')
-          .where('campId', isEqualTo: campId)
-          .get();
+      for (final currentCampId in campIds) {
+        final walkInSnapshot = await firestore
+            .collection('walk_in_donors')
+            .where(
+              'campId',
+              isEqualTo: currentCampId,
+            )
+            .get();
 
-      for (final doc in walkInSnapshot.docs) {
-        final data = doc.data();
+        for (final doc in walkInSnapshot.docs) {
+          final data = doc.data();
 
-        allDonors.add({
-          'id': doc.id,
-          'documentId': doc.id,
-          'donorId': doc.id,
-          'bookingId': '',
-          'campId': data['campId'] ?? campId,
-          'name': data['donorName'] ?? 'Walk-in Donor',
-          'phone': data['phone'] ?? '',
-          'email': data['email'] ?? '',
-          'bloodGroup': data['bloodGroup'] ?? 'N/A',
-          'city': '',
-          'slot': '',
-          'date': '',
-          'location': '',
-          'status':
-              data['status'] ?? 'Walk-in Registered',
-          'type': 'walkin',
-          'age': data['age'],
-          'weight': data['weight'],
-          'gender': data['gender'],
-          'medicalCondition':
-              data['medicalCondition'],
-        });
+          allDonors.add({
+            'id': doc.id,
+            'documentId': doc.id,
+            'donorId': doc.id,
+            'bookingId': '',
+
+            'campId':
+                data['campId'] ?? currentCampId,
+
+            'name':
+                data['donorName'] ??
+                'Walk-in Donor',
+
+            'phone':
+                data['phone'] ?? '',
+
+            'email':
+                data['email'] ?? '',
+
+            'bloodGroup':
+                data['bloodGroup'] ??
+                'N/A',
+
+            'city': '',
+
+            'slot': '',
+
+            'date': '',
+
+            'location': '',
+
+            'campName':
+                data['campName'] ??
+                'Blood Camp',
+
+            'status':
+                data['status'] ??
+                'Walk-in Registered',
+
+            'type': 'walkin',
+
+            'age': data['age'],
+
+            'weight': data['weight'],
+
+            'gender': data['gender'],
+
+            'medicalCondition':
+                data['medicalCondition'],
+          });
+        }
       }
+
+      // -------------------------------------------------------
+      // UPDATE SCREEN
+      // -------------------------------------------------------
 
       if (mounted) {
         setState(() {
@@ -363,7 +446,8 @@ class _DonorRosterScreenState extends State<DonorRosterScreen> {
     Map<String, dynamic> donor,
   ) {
     final String name =
-        donor['name']?.toString() ?? 'Unknown Donor';
+        donor['name']?.toString() ??
+        'Unknown Donor';
 
     final String phone =
         donor['phone']?.toString() ?? '';
@@ -421,7 +505,8 @@ class _DonorRosterScreenState extends State<DonorRosterScreen> {
                         name,
                         style: const TextStyle(
                           fontSize: 17,
-                          fontWeight: FontWeight.bold,
+                          fontWeight:
+                              FontWeight.bold,
                         ),
                       ),
 
@@ -432,7 +517,8 @@ class _DonorRosterScreenState extends State<DonorRosterScreen> {
                             ? 'Phone not available'
                             : phone,
                         style: TextStyle(
-                          color: Colors.grey.shade700,
+                          color:
+                              Colors.grey.shade700,
                         ),
                       ),
                     ],
@@ -440,7 +526,8 @@ class _DonorRosterScreenState extends State<DonorRosterScreen> {
                 ),
 
                 Container(
-                  padding: const EdgeInsets.symmetric(
+                  padding:
+                      const EdgeInsets.symmetric(
                     horizontal: 10,
                     vertical: 7,
                   ),
@@ -453,7 +540,8 @@ class _DonorRosterScreenState extends State<DonorRosterScreen> {
                     bloodGroup,
                     style: const TextStyle(
                       color: Colors.red,
-                      fontWeight: FontWeight.bold,
+                      fontWeight:
+                          FontWeight.bold,
                     ),
                   ),
                 ),
@@ -487,7 +575,8 @@ class _DonorRosterScreenState extends State<DonorRosterScreen> {
                 const Spacer(),
 
                 Container(
-                  padding: const EdgeInsets.symmetric(
+                  padding:
+                      const EdgeInsets.symmetric(
                     horizontal: 9,
                     vertical: 5,
                   ),
@@ -506,7 +595,8 @@ class _DonorRosterScreenState extends State<DonorRosterScreen> {
                     status,
                     style: TextStyle(
                       fontSize: 12,
-                      fontWeight: FontWeight.w600,
+                      fontWeight:
+                          FontWeight.w600,
                       color: deferred
                           ? Colors.orange.shade800
                           : screeningPassed
@@ -528,26 +618,35 @@ class _DonorRosterScreenState extends State<DonorRosterScreen> {
                     !screeningPassed &&
                     !deferred)
                   Expanded(
-                    child: ElevatedButton.icon(
+                    child:
+                        ElevatedButton.icon(
                       onPressed: () =>
                           checkInDonor(donor),
                       icon: const Icon(
                         Icons.login,
                         size: 18,
                       ),
-                      label: const Text('Check In'),
-                      style: ElevatedButton.styleFrom(
+                      label:
+                          const Text('Check In'),
+                      style:
+                          ElevatedButton.styleFrom(
                         backgroundColor:
-                            const Color(0xFF0867B2),
-                        foregroundColor: Colors.white,
+                            const Color(
+                          0xFF0867B2,
+                        ),
+                        foregroundColor:
+                            Colors.white,
                         padding:
-                            const EdgeInsets.symmetric(
+                            const EdgeInsets
+                                .symmetric(
                           vertical: 11,
                         ),
                         shape:
                             RoundedRectangleBorder(
                           borderRadius:
-                              BorderRadius.circular(10),
+                              BorderRadius.circular(
+                            10,
+                          ),
                         ),
                       ),
                     ),
@@ -559,7 +658,8 @@ class _DonorRosterScreenState extends State<DonorRosterScreen> {
                   const SizedBox(width: 8),
 
                 Expanded(
-                  child: OutlinedButton.icon(
+                  child:
+                      OutlinedButton.icon(
                     onPressed: () =>
                         openScreening(donor),
                     icon: const Icon(
@@ -572,9 +672,12 @@ class _DonorRosterScreenState extends State<DonorRosterScreen> {
                           ? 'View Screening'
                           : 'Screen Donor',
                     ),
-                    style: OutlinedButton.styleFrom(
+                    style:
+                        OutlinedButton.styleFrom(
                       foregroundColor:
-                          const Color(0xFF0867B2),
+                          const Color(
+                        0xFF0867B2,
+                      ),
                       padding:
                           const EdgeInsets.symmetric(
                         vertical: 11,
@@ -582,7 +685,9 @@ class _DonorRosterScreenState extends State<DonorRosterScreen> {
                       shape:
                           RoundedRectangleBorder(
                         borderRadius:
-                            BorderRadius.circular(10),
+                            BorderRadius.circular(
+                          10,
+                        ),
                       ),
                     ),
                   ),
@@ -653,7 +758,8 @@ class _DonorRosterScreenState extends State<DonorRosterScreen> {
         onRefresh: loadDonors,
         child: isLoading
             ? const Center(
-                child: CircularProgressIndicator(),
+                child:
+                    CircularProgressIndicator(),
               )
             : Column(
                 children: [
@@ -661,9 +767,12 @@ class _DonorRosterScreenState extends State<DonorRosterScreen> {
 
                   Container(
                     width: double.infinity,
-                    padding: const EdgeInsets.all(18),
-                    decoration: const BoxDecoration(
-                      color: Color(0xFFEAF3FA),
+                    padding:
+                        const EdgeInsets.all(18),
+                    decoration:
+                        const BoxDecoration(
+                      color:
+                          Color(0xFFEAF3FA),
                     ),
                     child: Column(
                       crossAxisAlignment:
@@ -673,8 +782,10 @@ class _DonorRosterScreenState extends State<DonorRosterScreen> {
                           'Today’s Donor Roster',
                           style: TextStyle(
                             fontSize: 21,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF0867B2),
+                            fontWeight:
+                                FontWeight.bold,
+                            color:
+                                Color(0xFF0867B2),
                           ),
                         ),
 
@@ -703,22 +814,29 @@ class _DonorRosterScreenState extends State<DonorRosterScreen> {
                   // ---------------- SEARCH ----------------
 
                   Padding(
-                    padding: const EdgeInsets.all(15),
+                    padding:
+                        const EdgeInsets.all(15),
                     child: TextField(
-                      controller: searchController,
+                      controller:
+                          searchController,
                       onChanged: (_) {
                         setState(() {});
                       },
-                      decoration: InputDecoration(
+                      decoration:
+                          InputDecoration(
                         hintText:
                             'Search donor by name, phone or blood group',
-                        prefixIcon: const Icon(
+                        prefixIcon:
+                            const Icon(
                           Icons.search,
-                          ),
+                        ),
                         suffixIcon:
-                            searchController.text.isNotEmpty
+                            searchController
+                                    .text
+                                    .isNotEmpty
                                 ? IconButton(
-                                    icon: const Icon(
+                                    icon:
+                                        const Icon(
                                       Icons.clear,
                                     ),
                                     onPressed: () {
@@ -728,9 +846,12 @@ class _DonorRosterScreenState extends State<DonorRosterScreen> {
                                     },
                                   )
                                 : null,
-                        border: OutlineInputBorder(
+                        border:
+                            OutlineInputBorder(
                           borderRadius:
-                              BorderRadius.circular(12),
+                              BorderRadius.circular(
+                            12,
+                          ),
                         ),
                       ),
                     ),
@@ -777,7 +898,8 @@ class _DonorRosterScreenState extends State<DonorRosterScreen> {
                             itemBuilder:
                                 (context, index) {
                               return buildDonorCard(
-                                displayedDonors[index],
+                                displayedDonors[
+                                    index],
                               );
                             },
                           ),
@@ -793,32 +915,43 @@ class _DonorRosterScreenState extends State<DonorRosterScreen> {
       bottomNavigationBar:
           BottomNavigationBar(
         currentIndex: selectedIndex,
-        type: BottomNavigationBarType.fixed,
+        type:
+            BottomNavigationBarType.fixed,
         selectedItemColor:
             const Color(0xFF0867B2),
-        unselectedItemColor: Colors.grey,
+        unselectedItemColor:
+            Colors.grey,
         onTap: changePage,
         items: const [
           BottomNavigationBarItem(
-            icon: Icon(Icons.home_outlined),
+            icon: Icon(
+              Icons.home_outlined,
+            ),
             activeIcon: Icon(Icons.home),
             label: 'Home',
           ),
 
           BottomNavigationBarItem(
-            icon: Icon(Icons.people_outline),
+            icon: Icon(
+              Icons.people_outline,
+            ),
             activeIcon: Icon(Icons.people),
             label: 'Roster',
           ),
 
           BottomNavigationBarItem(
-            icon: Icon(Icons.bloodtype_outlined),
-            activeIcon: Icon(Icons.bloodtype),
+            icon: Icon(
+              Icons.bloodtype_outlined,
+            ),
+            activeIcon:
+                Icon(Icons.bloodtype),
             label: 'Donation',
           ),
 
           BottomNavigationBarItem(
-            icon: Icon(Icons.person_outline),
+            icon: Icon(
+              Icons.person_outline,
+            ),
             activeIcon: Icon(Icons.person),
             label: 'Profile',
           ),
@@ -832,7 +965,8 @@ class _DonorRosterScreenState extends State<DonorRosterScreen> {
 // STAFF NOTIFICATIONS SCREEN
 // =============================================================
 
-class StaffNotificationsScreen extends StatelessWidget {
+class StaffNotificationsScreen
+    extends StatelessWidget {
   const StaffNotificationsScreen({
     super.key,
   });
@@ -846,14 +980,12 @@ class StaffNotificationsScreen extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
-          'Notifications',
-        ),
+        title:
+            const Text('Notifications'),
         backgroundColor:
             const Color(0xFF0867B2),
         foregroundColor: Colors.white,
       ),
-
       body: StreamBuilder<
           QuerySnapshot<Map<String, dynamic>>>(
         stream: firestore
@@ -863,22 +995,25 @@ class StaffNotificationsScreen extends StatelessWidget {
               isEqualTo: staffId,
             )
             .snapshots(),
-
-        builder: (context, snapshot) {
+        builder:
+            (context, snapshot) {
           if (snapshot.connectionState ==
               ConnectionState.waiting) {
             return const Center(
-              child: CircularProgressIndicator(),
+              child:
+                  CircularProgressIndicator(),
             );
           }
 
           if (snapshot.hasError) {
             return Center(
               child: Padding(
-                padding: const EdgeInsets.all(20),
+                padding:
+                    const EdgeInsets.all(20),
                 child: Text(
                   'Unable to load notifications.\n\n${snapshot.error}',
-                  textAlign: TextAlign.center,
+                  textAlign:
+                      TextAlign.center,
                 ),
               ),
             );
@@ -903,7 +1038,8 @@ class StaffNotificationsScreen extends StatelessWidget {
                     'No notifications',
                     style: TextStyle(
                       fontSize: 18,
-                      fontWeight: FontWeight.w600,
+                      fontWeight:
+                          FontWeight.w600,
                     ),
                   ),
                 ],
@@ -912,22 +1048,27 @@ class StaffNotificationsScreen extends StatelessWidget {
           }
 
           return ListView.builder(
-            padding: const EdgeInsets.all(15),
+            padding:
+                const EdgeInsets.all(15),
             itemCount: docs.length,
-            itemBuilder: (context, index) {
+            itemBuilder:
+                (context, index) {
               final doc = docs[index];
               final data = doc.data();
 
               return _NotificationCard(
                 documentId: doc.id,
                 title:
-                    data['title']?.toString() ??
+                    data['title']
+                            ?.toString() ??
                         'Notification',
                 message:
-                    data['message']?.toString() ??
+                    data['message']
+                            ?.toString() ??
                         '',
                 type:
-                    data['type']?.toString() ??
+                    data['type']
+                            ?.toString() ??
                         'general',
                 isRead:
                     data['isRead'] == true,
@@ -946,7 +1087,8 @@ class StaffNotificationsScreen extends StatelessWidget {
 // NOTIFICATION CARD
 // =============================================================
 
-class _NotificationCard extends StatelessWidget {
+class _NotificationCard
+    extends StatelessWidget {
   final String documentId;
   final String title;
   final String message;
@@ -993,10 +1135,13 @@ class _NotificationCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Card(
-      margin: const EdgeInsets.only(bottom: 12),
+      margin:
+          const EdgeInsets.only(bottom: 12),
       elevation: isRead ? 1 : 3,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(14),
+      shape:
+          RoundedRectangleBorder(
+        borderRadius:
+            BorderRadius.circular(14),
       ),
       child: ListTile(
         contentPadding:
@@ -1007,7 +1152,8 @@ class _NotificationCard extends StatelessWidget {
               const Color(0xFFEAF3FA),
           child: Icon(
             getNotificationIcon(),
-            color: const Color(0xFF0867B2),
+            color:
+                const Color(0xFF0867B2),
           ),
         ),
 
@@ -1052,7 +1198,8 @@ class _NotificationCard extends StatelessWidget {
                 formatDate(createdAt),
                 style: TextStyle(
                   fontSize: 11,
-                  color: Colors.grey.shade600,
+                  color:
+                      Colors.grey.shade600,
                 ),
               ),
             ],
@@ -1061,7 +1208,8 @@ class _NotificationCard extends StatelessWidget {
 
         onTap: () async {
           if (!isRead) {
-            await FirebaseFirestore.instance
+            await FirebaseFirestore
+                .instance
                 .collection('notifications')
                 .doc(documentId)
                 .update({
@@ -1078,7 +1226,8 @@ class _NotificationCard extends StatelessWidget {
 // STAFF PROFILE SCREEN
 // =============================================================
 
-class StaffProfileScreen extends StatelessWidget {
+class StaffProfileScreen
+    extends StatelessWidget {
   const StaffProfileScreen({
     super.key,
   });
@@ -1087,16 +1236,16 @@ class StaffProfileScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
-          'Staff Profile',
-        ),
+        title:
+            const Text('Staff Profile'),
         backgroundColor:
             const Color(0xFF0867B2),
         foregroundColor: Colors.white,
       ),
 
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
+        padding:
+            const EdgeInsets.all(20),
         child: Column(
           children: [
             const CircleAvatar(
@@ -1106,7 +1255,8 @@ class StaffProfileScreen extends StatelessWidget {
               child: Icon(
                 Icons.person,
                 size: 55,
-                color: Color(0xFF0867B2),
+                color:
+                    Color(0xFF0867B2),
               ),
             ),
 
@@ -1116,7 +1266,8 @@ class StaffProfileScreen extends StatelessWidget {
               'Camp Staff',
               style: TextStyle(
                 fontSize: 22,
-                fontWeight: FontWeight.bold,
+                fontWeight:
+                    FontWeight.bold,
               ),
             ),
 
@@ -1125,52 +1276,65 @@ class StaffProfileScreen extends StatelessWidget {
             Text(
               'staff001',
               style: TextStyle(
-                color: Colors.grey.shade600,
+                color:
+                    Colors.grey.shade600,
               ),
             ),
 
             const SizedBox(height: 25),
 
             profileTile(
-              icon: Icons.badge_outlined,
+              icon:
+                  Icons.badge_outlined,
               title: 'Staff ID',
               value: 'staff001',
             ),
 
             profileTile(
-              icon: Icons.work_outline,
+              icon:
+                  Icons.work_outline,
               title: 'Role',
               value: 'Camp Staff',
             ),
 
             profileTile(
-              icon: Icons.location_on_outlined,
+              icon:
+                  Icons.location_on_outlined,
               title: 'Assigned Camp',
-              value: 'Lahore Campus',
+              value:
+                  'Lahore Campus',
             ),
 
             profileTile(
-              icon: Icons.business_outlined,
+              icon:
+                  Icons.business_outlined,
               title: 'Department',
-              value: 'Blood Donation Camp',
+              value:
+                  'Blood Donation Camp',
             ),
 
             const SizedBox(height: 20),
 
             SizedBox(
-              width: double.infinity,
-              child: OutlinedButton.icon(
+              width:
+                  double.infinity,
+              child:
+                  OutlinedButton.icon(
                 onPressed: () {
                   Navigator.pop(context);
                 },
-                icon: const Icon(Icons.arrow_back),
+                icon: const Icon(
+                  Icons.arrow_back,
+                ),
                 label: const Text(
                   'Back to Roster',
                 ),
                 style:
                     OutlinedButton.styleFrom(
                   foregroundColor:
-                      const Color(0xFF0867B2),
+                      const Color(
+                    0xFF0867B2,
+                  ),
                   padding:
                       const EdgeInsets.symmetric(
                     vertical: 13,
@@ -1195,7 +1359,8 @@ class StaffProfileScreen extends StatelessWidget {
       child: ListTile(
         leading: Icon(
           icon,
-          color: const Color(0xFF0867B2),
+          color:
+              const Color(0xFF0867B2),
         ),
         title: Text(
           title,
@@ -1208,7 +1373,8 @@ class StaffProfileScreen extends StatelessWidget {
           value,
           style: const TextStyle(
             fontSize: 16,
-            fontWeight: FontWeight.w600,
+            fontWeight:
+                FontWeight.w600,
           ),
         ),
       ),

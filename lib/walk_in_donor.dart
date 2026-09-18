@@ -1,9 +1,15 @@
+
 import 'package:flutter/material.dart';
 import 'walk_in_donors_firestore.dart';
 import 'donor_roster.dart';
 
 class WalkInDonorScreen extends StatefulWidget {
-  const WalkInDonorScreen({super.key});
+  final String campId;
+
+  const WalkInDonorScreen({
+    super.key,
+    required this.campId,
+  });
 
   @override
   State<WalkInDonorScreen> createState() =>
@@ -135,12 +141,22 @@ class _WalkInDonorScreenState
       return;
     }
 
+    if (!feelingWell) {
+      showMessage(
+        'The donor must be feeling well before registration.',
+        isError: true,
+      );
+      return;
+    }
+
     setState(() {
       isSaving = true;
     });
 
     try {
-      const String campId = 'camp001';
+      // The value stored in Firestore is exactly "camp 7".
+      final String campId = widget.campId;
+
       const String staffId = 'staff001';
 
       await WalkInDonorsFirestore.addWalkInDonor(
@@ -162,9 +178,6 @@ class _WalkInDonorScreenState
         isSaving = false;
       });
 
-      // Walk-in is now saved.
-      // Go to Donor Roster instead of directly
-      // opening the Screening screen.
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
@@ -255,7 +268,8 @@ class _WalkInDonorScreenState
     return Scaffold(
       appBar: AppBar(
         title: const Text('Walk-in Donor'),
-        backgroundColor: const Color(0xFF064D8C),
+        backgroundColor:
+            const Color(0xFF064D8C),
         foregroundColor: Colors.white,
       ),
       body: SingleChildScrollView(
@@ -428,7 +442,8 @@ class _WalkInDonorScreenState
               ),
               child:
                   DropdownButtonFormField<String>(
-                value: selectedMedicalCondition,
+                value:
+                    selectedMedicalCondition,
                 decoration: InputDecoration(
                   labelText:
                       'Medical Condition',
@@ -538,25 +553,33 @@ class _WalkInDonorScreenState
                 borderRadius:
                     BorderRadius.circular(12),
               ),
-              child: const Column(
+              child: Column(
                 crossAxisAlignment:
                     CrossAxisAlignment.start,
                 children: [
-                  Text(
+                  const Text(
                     'Today’s Camp',
                     style: TextStyle(
                       fontWeight:
                           FontWeight.bold,
                     ),
                   ),
-                  SizedBox(height: 5),
-                  Text('Camp ID: camp001'),
-                  SizedBox(height: 8),
+
+                  const SizedBox(height: 5),
+
                   Text(
+                    'Camp ID: ${widget.campId}',
+                  ),
+
+                  const SizedBox(height: 8),
+
+                  const Text(
                     'Registration Time: Automatic',
                   ),
-                  SizedBox(height: 8),
-                  Text(
+
+                  const SizedBox(height: 8),
+
+                  const Text(
                     'Registered By: staff001',
                   ),
                 ],

@@ -1,4 +1,6 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'donation_records_firestore.dart';
 
 class DonationRecordScreen extends StatefulWidget {
@@ -9,44 +11,30 @@ class DonationRecordScreen extends StatefulWidget {
 }
 
 class _DonationRecordScreenState extends State<DonationRecordScreen> {
-  // Demo screened-passed donors
-  final List<Map<String, dynamic>> donors = [
-    {
-      'name': 'Fatima Ahmed',
-      'phone': '03221234567',
-      'bloodGroup': 'O+',
-      'screeningStatus': 'Screening Passed',
-      'slot': '10:00 AM',
-      'donorId': 'demo_donor_001',
-      'bookingId': 'demo_booking_001',
-      'campId': 'camp001',
-      'staffId': 'staff001',
-    },
-    {
-      'name': 'Ayesha Khan',
-      'phone': '03001234567',
-      'bloodGroup': 'A+',
-      'screeningStatus': 'Screening Passed',
-      'slot': '09:00 AM',
-      'donorId': 'demo_donor_002',
-      'bookingId': 'demo_booking_002',
-      'campId': 'camp001',
-      'staffId': 'staff001',
-    },
-  ];
+  final FirebaseFirestore firestore = FirebaseFirestore.instance;
+
+  static const String campId = 'camp 7';
+
+  List<Map<String, dynamic>> donors = [];
 
   Map<String, dynamic>? selectedDonor;
 
-  final TextEditingController bagNumberController =
-      TextEditingController();
+  final TextEditingController bagNumberController = TextEditingController();
 
-  final TextEditingController notesController =
-      TextEditingController();
+  final TextEditingController notesController = TextEditingController();
 
   String donationType = 'Whole Blood';
+
   String donationStatus = 'Completed';
 
   bool isSaving = false;
+  bool isLoadingDonors = true;
+
+  @override
+  void initState() {
+    super.initState();
+    loadDonors();
+  }
 
   @override
   void dispose() {
@@ -55,20 +43,239 @@ class _DonationRecordScreenState extends State<DonationRecordScreen> {
     super.dispose();
   }
 
+  // ==========================================================
+  // LOAD REAL DONORS
+  // ==========================================================
+
+  Future<void> loadDonors() async {
+    setState(() {
+      isLoadingDonors = true;
+    });
+
+    try {
+      final List<Map<String, dynamic>> loadedDonors = [];
+
+      // ========================================================
+      // 1. LOAD SCREENING RECORDS FOR CAMP 7
+      // ========================================================
+
+      final screeningSnapshot = await firestore
+          .collection('screenings')
+          .where('campId', isEqualTo: campId)
+          .get();
+
+      // ========================================================
+      // 2. LOAD BOOKINGS FOR CAMP 7
+      // ========================================================
+
+      final bookingSnapshot = await firestore
+          .collection('bookings')
+          .where('campId', isEqualTo: campId)
+          .get();
+
+      // Make a quick map of booking documents.
+      final Map<String, QueryDocumentSnapshot<Map<String, dynamic>>>
+      bookingMap = {};
+
+      for (final doc in bookingSnapshot.docs) {
+        bookingMap[doc.id] = doc;
+      }
+
+      // ========================================================
+      // 3. PROCESS SCREENED DONORS
+      // ========================================================
+
+      for (final screeningDoc in screeningSnapshot.docs) {
+        final screeningData = screeningDoc.data();
+
+        final String screeningStatus =
+            screeningData['screeningStatus']?.toString().trim().toLowerCase() ??
+            '';
+
+        // Only donors who passed screening can donate.
+        final bool passed =
+            screeningStatus == 'passed' ||
+            screeningStatus == 'screening passed';
+
+        if (!passed) {
+          continue;
+        }
+
+        // ------------------------------------------------------
+        // Find booking ID from screening record
+        // ------------------------------------------------------
+
+        final String bookingId = screeningData['bookingId']?.toString() ?? '';
+
+        QueryDocumentSnapshot<Map<String, dynamic>>? bookingDoc;
+
+        if (bookingId.isNotEmpty) {
+          bookingDoc = bookingMap[bookingId];
+        }
+
+        // ------------------------------------------------------
+        // Get donor ID
+        // ------------------------------------------------------
+
+        String donorId = screeningData['donorId']?.toString() ?? '';
+
+        if (donorId.isEmpty && bookingDoc != null) {
+          donorId = bookingDoc.data()['donorId']?.toString() ?? '';
+        }
+
+        // ------------------------------------------------------
+        // Get donor information
+        // ------------------------------------------------------
+
+        String donorName = screeningData['donorName']?.toString() ?? '';
+
+        String phone = screeningData['donorPhone']?.toString() ?? '';
+
+        String bloodGroup = screeningData['bloodGroup']?.toString() ?? '';
+
+        String slot = '';
+
+        // If information is missing from screening,
+        // get it from booking.
+        if (bookingDoc != null) {
+          final bookingData = bookingDoc.data();
+
+          if (donorName.isEmpty) {
+            donorName = bookingData['donorName']?.toString() ?? 'Unknown Donor';
+          }
+
+          if (phone.isEmpty) {
+            phone = bookingData['donorPhone']?.toString() ?? '';
+          }
+
+          if (bloodGroup.isEmpty) {
+            bloodGroup = bookingData['bloodGroup']?.toString() ?? '';
+          }
+
+          slot = bookingData['slot']?.toString() ?? '';
+        }
+
+        if (donorName.isEmpty) {
+          donorName = 'Unknown Donor';
+        }
+
+        // ------------------------------------------------------
+        // Add donor to donation list
+        // ------------------------------------------------------
+
+        loadedDonors.add({
+          'name': donorName,
+          'phone': phone,
+          'bloodGroup': bloodGroup,
+
+          'screeningStatus':
+              screeningData['screeningStatus']?.toString() ??
+              'Screening Passed',
+
+          'slot': slot,
+
+          'donorId': donorId,
+
+          'bookingId': bookingId,
+
+          'campId': campId,
+
+          'staffId': screeningData['staffId']?.toString() ?? 'staff001',
+
+          'type': 'booking',
+
+          'screeningId': screeningDoc.id,
+        });
+      }
+
+      // ========================================================
+      // 4. LOAD WALK-IN DONORS
+      // ========================================================
+
+      final walkInSnapshot = await firestore
+          .collection('walk_in_donors')
+          .where('campId', isEqualTo: campId)
+          .get();
+
+      for (final doc in walkInSnapshot.docs) {
+        final data = doc.data();
+
+        final String status =
+            data['status']?.toString().trim().toLowerCase() ?? '';
+
+        final bool eligible =
+            status == 'confirmed' ||
+            status == 'checked in' ||
+            status == 'checked_in' ||
+            status == 'screening' ||
+            status == 'screening passed' ||
+            status == 'passed';
+
+        if (!eligible) {
+          continue;
+        }
+
+        loadedDonors.add({
+          'name': data['donorName']?.toString() ?? 'Walk-in Donor',
+
+          'phone': data['phone']?.toString() ?? '',
+
+          'bloodGroup': data['bloodGroup']?.toString() ?? '',
+
+          'screeningStatus': data['screeningStatus']?.toString() ?? status,
+
+          'slot': 'Walk-in',
+
+          'donorId': data['donorId']?.toString() ?? '',
+
+          'bookingId': data['bookingId']?.toString() ?? '',
+
+          'campId': campId,
+
+          'staffId': data['registeredByStaff']?.toString() ?? 'staff001',
+
+          'type': 'walkin',
+
+          'walkInDocumentId': doc.id,
+        });
+      }
+
+      // ========================================================
+      // 5. UPDATE SCREEN
+      // ========================================================
+
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        donors = loadedDonors;
+        isLoadingDonors = false;
+      });
+    } catch (e) {
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        isLoadingDonors = false;
+      });
+
+      showMessage('Unable to load donors.\n$e', isError: true);
+    }
+  }
+  // ==========================================================
+  // SAVE DONATION
+  // ==========================================================
+
   Future<void> saveDonation() async {
     if (selectedDonor == null) {
-      showMessage(
-        'Please select a donor.',
-        isError: true,
-      );
+      showMessage('Please select a donor.', isError: true);
       return;
     }
 
     if (bagNumberController.text.trim().isEmpty) {
-      showMessage(
-        'Please enter the bag / unit number.',
-        isError: true,
-      );
+      showMessage('Please enter the bag / unit number.', isError: true);
       return;
     }
 
@@ -77,35 +284,87 @@ class _DonationRecordScreenState extends State<DonationRecordScreen> {
     });
 
     try {
-      // Get IDs from the selected donor
-      final String donorId =
-          selectedDonor!['donorId']?.toString() ??
-              selectedDonor!['id']?.toString() ??
-              'demo_donor';
+      final String donorId = selectedDonor!['donorId']?.toString() ?? '';
 
-      final String bookingId =
-          selectedDonor!['bookingId']?.toString() ??
-              'demo_booking';
+      final String bookingId = selectedDonor!['bookingId']?.toString() ?? '';
 
-      final String campId =
-          selectedDonor!['campId']?.toString() ??
-              'camp001';
+      // Firestore Camp 7 document ID
+      const String currentCampId = 'camp7';
 
       final String staffId =
-          selectedDonor!['staffId']?.toString() ??
-              'staff001';
+          selectedDonor!['staffId']?.toString() ?? 'staff001';
+
+      // --------------------------------------------------------
+      // 1. SAVE DONATION RECORD
+      // --------------------------------------------------------
 
       await DonationRecordsFirestore.addDonation(
         donorId: donorId,
         bookingId: bookingId,
-        campId: campId,
-        bloodGroup:
-            selectedDonor!['bloodGroup']?.toString() ?? '',
+        campId: currentCampId,
+        bloodGroup: selectedDonor!['bloodGroup']?.toString() ?? '',
         bagNumber: bagNumberController.text.trim(),
         donationStatus: donationStatus,
         staffId: staffId,
         notes: notesController.text.trim(),
       );
+
+      // --------------------------------------------------------
+      // 2. BOOKED DONOR
+      // --------------------------------------------------------
+
+      if (bookingId.isNotEmpty && selectedDonor!['type'] == 'booking') {
+        if (donationStatus == 'Completed') {
+          // Mark booking as completed and save completion time
+          await firestore.collection('bookings').doc(bookingId).update({
+            'status': 'Completed',
+            'donationStatus': 'Completed',
+            'completedAt': FieldValue.serverTimestamp(),
+          });
+
+          // ----------------------------------------------------
+          // 3. CREATE DONATION NOTIFICATION
+          // ----------------------------------------------------
+
+          if (donorId.isNotEmpty) {
+            await firestore.collection('notifications').add({
+              'userId': donorId,
+              'title': 'Donation Completed',
+              'message':
+                  'Thank you for donating blood. Your donation has been successfully completed.',
+              'type': 'donation',
+              'isRead': false,
+              'createdAt': FieldValue.serverTimestamp(),
+              'bookingId': bookingId,
+              'campId': currentCampId,
+            });
+          }
+        } else {
+          // Donation was not completed
+          await firestore.collection('bookings').doc(bookingId).update({
+            'status': 'Screening Passed',
+            'donationStatus': 'Not Completed',
+          });
+        }
+      }
+
+      // --------------------------------------------------------
+      // 4. WALK-IN DONOR
+      // --------------------------------------------------------
+
+      if (selectedDonor!['type'] == 'walkin' &&
+          selectedDonor!['walkInDocumentId'] != null) {
+        await firestore
+            .collection('walk_in_donors')
+            .doc(selectedDonor!['walkInDocumentId'])
+            .update({
+              'status': donationStatus == 'Completed'
+                  ? 'Completed'
+                  : 'Screening Passed',
+              if (donationStatus == 'Completed')
+                'completedAt': FieldValue.serverTimestamp(),
+            });
+      }
 
       if (!mounted) return;
 
@@ -113,10 +372,14 @@ class _DonationRecordScreenState extends State<DonationRecordScreen> {
         isSaving = false;
       });
 
+      // --------------------------------------------------------
+      // 5. SHOW SUCCESS DIALOG
+      // --------------------------------------------------------
+
       showSuccessDialog(
         donorId: donorId,
         bookingId: bookingId,
-        campId: campId,
+        campId: currentCampId,
         staffId: staffId,
       );
     } catch (e) {
@@ -126,22 +389,15 @@ class _DonationRecordScreenState extends State<DonationRecordScreen> {
         isSaving = false;
       });
 
-      showMessage(
-        'Failed to save donation record.\n$e',
-        isError: true,
-      );
+      showMessage('Failed to save donation record.\n$e', isError: true);
     }
   }
 
-  void showMessage(
-    String message, {
-    bool isError = false,
-  }) {
+  void showMessage(String message, {bool isError = false}) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
-        backgroundColor:
-            isError ? Colors.red : Colors.green,
+        backgroundColor: isError ? Colors.red : Colors.green,
       ),
     );
   }
@@ -159,10 +415,7 @@ class _DonationRecordScreenState extends State<DonationRecordScreen> {
         return AlertDialog(
           title: const Row(
             children: [
-              Icon(
-                Icons.check_circle,
-                color: Colors.green,
-              ),
+              Icon(Icons.check_circle, color: Colors.green),
               SizedBox(width: 8),
               Text('Donation Recorded'),
             ],
@@ -174,39 +427,48 @@ class _DonationRecordScreenState extends State<DonationRecordScreen> {
                 const Text(
                   'Donation record has been successfully saved to Firebase.',
                 ),
+
                 const SizedBox(height: 16),
 
                 Text('Donor ID: $donorId'),
+
                 Text('Booking ID: $bookingId'),
+
                 Text('Camp ID: $campId'),
+
                 Text(
                   'Blood Group: '
                   '${selectedDonor!['bloodGroup']}',
                 ),
+
                 Text(
                   'Bag / Unit Number: '
                   '${bagNumberController.text.trim()}',
                 ),
+
                 Text(
-                  'Donation Status: $donationStatus',
+                  'Donation Status: '
+                  '$donationStatus',
                 ),
+
                 Text('Staff ID: $staffId'),
+
                 Text(
-                  'Donation Type: $donationType',
+                  'Donation Type: '
+                  '$donationType',
                 ),
 
                 if (notesController.text.trim().isNotEmpty)
                   Text(
-                    'Notes: ${notesController.text.trim()}',
+                    'Notes: '
+                    '${notesController.text.trim()}',
                   ),
 
                 const SizedBox(height: 12),
 
                 const Text(
                   'Donation Date & Time: Saved automatically',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: TextStyle(fontWeight: FontWeight.bold),
                 ),
               ],
             ),
@@ -225,6 +487,10 @@ class _DonationRecordScreenState extends State<DonationRecordScreen> {
     );
   }
 
+  // ==========================================================
+  // BUILD
+  // ==========================================================
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -236,57 +502,62 @@ class _DonationRecordScreenState extends State<DonationRecordScreen> {
 
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
+
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
+
           children: [
-
-            // --------------------------------------------------
-            // SELECT DONOR
-            // --------------------------------------------------
-
             const Text(
               'Select Donor',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
 
             const SizedBox(height: 10),
 
-            DropdownButtonFormField<Map<String, dynamic>>(
-              value: selectedDonor,
-              decoration: InputDecoration(
-                labelText: 'Donor',
-                border: OutlineInputBorder(
+            if (isLoadingDonors)
+              const Center(child: CircularProgressIndicator())
+            else if (donors.isEmpty)
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.orange.shade50,
                   borderRadius: BorderRadius.circular(12),
                 ),
-                prefixIcon: const Icon(
-                  Icons.person,
+                child: const Text(
+                  'No screened donors are available for Camp 7.',
                 ),
-              ),
-              items: donors.map((donor) {
-                return DropdownMenuItem<
-                    Map<String, dynamic>>(
-                  value: donor,
-                  child: Text(
-                    '${donor['name']} '
-                    '(${donor['bloodGroup']})',
+              )
+            else
+              DropdownButtonFormField<Map<String, dynamic>>(
+                value: selectedDonor,
+
+                decoration: InputDecoration(
+                  labelText: 'Donor',
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
                   ),
-                );
-              }).toList(),
-              onChanged: (value) {
-                setState(() {
-                  selectedDonor = value;
-                });
-              },
-            ),
+                  prefixIcon: const Icon(Icons.person),
+                ),
+
+                items: donors.map((donor) {
+                  return DropdownMenuItem<Map<String, dynamic>>(
+                    value: donor,
+                    child: Text(
+                      '${donor['name']} '
+                      '(${donor['bloodGroup']})',
+                    ),
+                  );
+                }).toList(),
+
+                onChanged: (value) {
+                  setState(() {
+                    selectedDonor = value;
+                  });
+                },
+              ),
 
             const SizedBox(height: 20),
-
-            // --------------------------------------------------
-            // DONOR INFORMATION
-            // --------------------------------------------------
 
             if (selectedDonor != null) ...[
               Container(
@@ -295,13 +566,10 @@ class _DonationRecordScreenState extends State<DonationRecordScreen> {
                 decoration: BoxDecoration(
                   color: Colors.blue.shade50,
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: Colors.blue.shade100,
-                  ),
+                  border: Border.all(color: Colors.blue.shade100),
                 ),
                 child: Column(
-                  crossAxisAlignment:
-                      CrossAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Text(
                       'Donor Information',
@@ -314,27 +582,35 @@ class _DonationRecordScreenState extends State<DonationRecordScreen> {
                     const SizedBox(height: 10),
 
                     Text(
-                      'Name: ${selectedDonor!['name']}',
+                      'Name: '
+                      '${selectedDonor!['name']}',
                     ),
+
                     Text(
-                      'Phone: ${selectedDonor!['phone']}',
+                      'Phone: '
+                      '${selectedDonor!['phone']}',
                     ),
+
                     Text(
                       'Blood Group: '
                       '${selectedDonor!['bloodGroup']}',
                     ),
+
                     Text(
                       'Donor ID: '
                       '${selectedDonor!['donorId']}',
                     ),
+
                     Text(
                       'Booking ID: '
                       '${selectedDonor!['bookingId']}',
                     ),
+
                     Text(
                       'Camp ID: '
                       '${selectedDonor!['campId']}',
                     ),
+
                     Text(
                       'Staff ID: '
                       '${selectedDonor!['staffId']}',
@@ -346,16 +622,9 @@ class _DonationRecordScreenState extends State<DonationRecordScreen> {
               const SizedBox(height: 20),
             ],
 
-            // --------------------------------------------------
-            // BAG / UNIT NUMBER
-            // --------------------------------------------------
-
             const Text(
               'Donation Details',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
 
             const SizedBox(height: 10),
@@ -368,80 +637,41 @@ class _DonationRecordScreenState extends State<DonationRecordScreen> {
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
-                prefixIcon: const Icon(
-                  Icons.bloodtype,
-                ),
+                prefixIcon: const Icon(Icons.bloodtype),
               ),
             ),
 
             const SizedBox(height: 16),
 
-            // --------------------------------------------------
-            // BLOOD GROUP
-            // --------------------------------------------------
-
             DropdownButtonFormField<String>(
-              value: selectedDonor?['bloodGroup']
-                  ?.toString(),
+              value: selectedDonor?['bloodGroup']?.toString(),
               decoration: InputDecoration(
                 labelText: 'Blood Group',
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
-                prefixIcon: const Icon(
-                  Icons.water_drop,
-                ),
+                prefixIcon: const Icon(Icons.water_drop),
               ),
               items: const [
-                DropdownMenuItem(
-                  value: 'A+',
-                  child: Text('A+'),
-                ),
-                DropdownMenuItem(
-                  value: 'A-',
-                  child: Text('A-'),
-                ),
-                DropdownMenuItem(
-                  value: 'B+',
-                  child: Text('B+'),
-                ),
-                DropdownMenuItem(
-                  value: 'B-',
-                  child: Text('B-'),
-                ),
-                DropdownMenuItem(
-                  value: 'AB+',
-                  child: Text('AB+'),
-                ),
-                DropdownMenuItem(
-                  value: 'AB-',
-                  child: Text('AB-'),
-                ),
-                DropdownMenuItem(
-                  value: 'O+',
-                  child: Text('O+'),
-                ),
-                DropdownMenuItem(
-                  value: 'O-',
-                  child: Text('O-'),
-                ),
+                DropdownMenuItem(value: 'A+', child: Text('A+')),
+                DropdownMenuItem(value: 'A-', child: Text('A-')),
+                DropdownMenuItem(value: 'B+', child: Text('B+')),
+                DropdownMenuItem(value: 'B-', child: Text('B-')),
+                DropdownMenuItem(value: 'AB+', child: Text('AB+')),
+                DropdownMenuItem(value: 'AB-', child: Text('AB-')),
+                DropdownMenuItem(value: 'O+', child: Text('O+')),
+                DropdownMenuItem(value: 'O-', child: Text('O-')),
               ],
               onChanged: (value) {
-                if (selectedDonor != null &&
-                    value != null) {
+                if (selectedDonor != null && value != null) {
                   setState(() {
-                    selectedDonor!['bloodGroup'] =
-                        value;
+                    selectedDonor!['bloodGroup'] = value;
                   });
                 }
               },
             ),
 
             const SizedBox(height: 16),
-
-            // --------------------------------------------------
-            // DONATION TYPE
-            // --------------------------------------------------
 
             DropdownButtonFormField<String>(
               value: donationType,
@@ -456,10 +686,7 @@ class _DonationRecordScreenState extends State<DonationRecordScreen> {
                   value: 'Whole Blood',
                   child: Text('Whole Blood'),
                 ),
-                DropdownMenuItem(
-                  value: 'Other',
-                  child: Text('Other'),
-                ),
+                DropdownMenuItem(value: 'Other', child: Text('Other')),
               ],
               onChanged: (value) {
                 if (value != null) {
@@ -472,10 +699,6 @@ class _DonationRecordScreenState extends State<DonationRecordScreen> {
 
             const SizedBox(height: 16),
 
-            // --------------------------------------------------
-            // DONATION STATUS
-            // --------------------------------------------------
-
             DropdownButtonFormField<String>(
               value: donationStatus,
               decoration: InputDecoration(
@@ -485,10 +708,7 @@ class _DonationRecordScreenState extends State<DonationRecordScreen> {
                 ),
               ),
               items: const [
-                DropdownMenuItem(
-                  value: 'Completed',
-                  child: Text('Completed'),
-                ),
+                DropdownMenuItem(value: 'Completed', child: Text('Completed')),
                 DropdownMenuItem(
                   value: 'Not Completed',
                   child: Text('Not Completed'),
@@ -505,63 +725,45 @@ class _DonationRecordScreenState extends State<DonationRecordScreen> {
 
             const SizedBox(height: 16),
 
-            // --------------------------------------------------
-            // NOTES
-            // --------------------------------------------------
-
             TextField(
               controller: notesController,
               maxLines: 4,
               decoration: InputDecoration(
                 labelText: 'Notes',
-                hintText:
-                    'Enter donation notes...',
+                hintText: 'Enter donation notes...',
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
-                prefixIcon: const Icon(
-                  Icons.notes,
-                ),
+                prefixIcon: const Icon(Icons.notes),
               ),
             ),
 
             const SizedBox(height: 25),
 
-            // --------------------------------------------------
-            // SAVE BUTTON
-            // --------------------------------------------------
-
             SizedBox(
               width: double.infinity,
               height: 52,
               child: ElevatedButton.icon(
-                onPressed:
-                    isSaving ? null : saveDonation,
+                onPressed: isSaving || donors.isEmpty ? null : saveDonation,
+
                 icon: isSaving
                     ? const SizedBox(
                         width: 20,
                         height: 20,
-                        child:
-                            CircularProgressIndicator(
+                        child: CircularProgressIndicator(
                           strokeWidth: 2,
                           color: Colors.white,
                         ),
                       )
-                    : const Icon(
-                        Icons.save,
-                      ),
-                label: Text(
-                  isSaving
-                      ? 'Saving...'
-                      : 'Save Donation Record',
-                ),
+                    : const Icon(Icons.save),
+
+                label: Text(isSaving ? 'Saving...' : 'Save Donation Record'),
+
                 style: ElevatedButton.styleFrom(
-                  backgroundColor:
-                      const Color(0xFFC62828),
+                  backgroundColor: const Color(0xFFC62828),
                   foregroundColor: Colors.white,
                   shape: RoundedRectangleBorder(
-                    borderRadius:
-                        BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(12),
                   ),
                 ),
               ),

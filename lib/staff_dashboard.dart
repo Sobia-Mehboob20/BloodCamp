@@ -42,45 +42,45 @@ class _StaffDashboardScreenState
     return Scaffold(
       body: _getCurrentPage(),
 
-      bottomNavigationBar: BottomNavigationBar(
+      bottomNavigationBar:
+          BottomNavigationBar(
         currentIndex: selectedIndex,
-
         selectedItemColor:
             const Color(0xFF0867B2),
-
-        unselectedItemColor:
-            Colors.grey,
-
-        type: BottomNavigationBarType.fixed,
-
+        unselectedItemColor: Colors.grey,
+        type:
+            BottomNavigationBarType.fixed,
         onTap: (index) {
           setState(() {
             selectedIndex = index;
           });
         },
-
         items: const [
           BottomNavigationBarItem(
-            icon: Icon(Icons.home_outlined),
+            icon:
+                Icon(Icons.home_outlined),
             activeIcon: Icon(Icons.home),
             label: 'Home',
           ),
-
           BottomNavigationBarItem(
-            icon: Icon(Icons.people_outline),
-            activeIcon: Icon(Icons.people),
+            icon:
+                Icon(Icons.people_outline),
+            activeIcon:
+                Icon(Icons.people),
             label: 'Roster',
           ),
-
           BottomNavigationBarItem(
-            icon: Icon(Icons.bloodtype_outlined),
-            activeIcon: Icon(Icons.bloodtype),
+            icon:
+                Icon(Icons.bloodtype_outlined),
+            activeIcon:
+                Icon(Icons.bloodtype),
             label: 'Donation',
           ),
-
           BottomNavigationBarItem(
-            icon: Icon(Icons.person_outline),
-            activeIcon: Icon(Icons.person),
+            icon:
+                Icon(Icons.person_outline),
+            activeIcon:
+                Icon(Icons.person),
             label: 'Profile',
           ),
         ],
@@ -101,12 +101,16 @@ class StaffHomePage extends StatefulWidget {
       _StaffHomePageState();
 }
 
-class _StaffHomePageState extends State<StaffHomePage> {
+class _StaffHomePageState
+    extends State<StaffHomePage> {
   final FirebaseFirestore firestore =
       FirebaseFirestore.instance;
 
-  static const String campId = 'camp001';
-  
+  // VALUE STORED IN FIRESTORE
+  static const String campId = 'camp 7';
+
+  // ACTUAL CAMP DOCUMENT ID
+  static const String campDocumentId = 'camp7';
 
   int bookedDonors = 0;
   int checkedInDonors = 0;
@@ -123,7 +127,7 @@ class _StaffHomePageState extends State<StaffHomePage> {
   }
 
   // ==========================================================
-  // LOAD DASHBOARD DATA FROM FIREBASE
+  // LOAD DASHBOARD DATA
   // ==========================================================
 
   Future<void> loadDashboardData() async {
@@ -135,92 +139,153 @@ class _StaffHomePageState extends State<StaffHomePage> {
     }
 
     try {
-      final bookingQuery = firestore
-          .collection('bookings')
-          .where(
-            'campId',
-            isEqualTo: campId,
-          )
-          .get();
+      // --------------------------------------------------------
+      // We read BOTH values:
+      //
+      // camp 7 = current standard
+      // camp7  = older records
+      // --------------------------------------------------------
 
-      final walkInQuery = firestore
-          .collection('walk_in_donors')
-          .where(
-            'campId',
-            isEqualTo: campId,
-          )
-          .get();
+      final bookingQueries = [
+        firestore
+            .collection('bookings')
+            .where('campId', isEqualTo: 'camp 7')
+            .get(),
+        firestore
+            .collection('bookings')
+            .where('campId', isEqualTo: 'camp7')
+            .get(),
+      ];
 
-      final screeningQuery = firestore
-          .collection('screenings')
-          .where(
-            'campId',
-            isEqualTo: campId,
-          )
-          .get();
+      final walkInQueries = [
+        firestore
+            .collection('walk_in_donors')
+            .where('campId', isEqualTo: 'camp 7')
+            .get(),
+        firestore
+            .collection('walk_in_donors')
+            .where('campId', isEqualTo: 'camp7')
+            .get(),
+      ];
 
-      final donationQuery = firestore
-          .collection('donations')
-          .where(
-            'campId',
-            isEqualTo: campId,
-          )
-          .get();
+      final screeningQueries = [
+        firestore
+            .collection('screenings')
+            .where('campId', isEqualTo: 'camp 7')
+            .get(),
+        firestore
+            .collection('screenings')
+            .where('campId', isEqualTo: 'camp7')
+            .get(),
+      ];
+
+      final donationQueries = [
+        firestore
+            .collection('donations')
+            .where('campId', isEqualTo: 'camp 7')
+            .get(),
+        firestore
+            .collection('donations')
+            .where('campId', isEqualTo: 'camp7')
+            .get(),
+      ];
 
       final results = await Future.wait([
-        bookingQuery,
-        walkInQuery,
-        screeningQuery,
-        donationQuery,
+        ...bookingQueries,
+        ...walkInQueries,
+        ...screeningQueries,
+        ...donationQueries,
       ]);
 
-      final bookingSnapshot = results[0];
-      final walkInSnapshot = results[1];
-      final screeningSnapshot = results[2];
-      final donationSnapshot = results[3];
+      final bookingDocs = <String, QueryDocumentSnapshot>{};
+      final walkInDocs = <String, QueryDocumentSnapshot>{};
+      final screeningDocs = <String, QueryDocumentSnapshot>{};
+      final donationDocs = <String, QueryDocumentSnapshot>{};
+
+      // Bookings
+      for (final doc
+          in (results[0] as QuerySnapshot).docs) {
+        bookingDocs[doc.id] = doc;
+      }
+
+      for (final doc
+          in (results[1] as QuerySnapshot).docs) {
+        bookingDocs[doc.id] = doc;
+      }
+
+      // Walk-ins
+      for (final doc
+          in (results[2] as QuerySnapshot).docs) {
+        walkInDocs[doc.id] = doc;
+      }
+
+      for (final doc
+          in (results[3] as QuerySnapshot).docs) {
+        walkInDocs[doc.id] = doc;
+      }
+
+      // Screenings
+      for (final doc
+          in (results[4] as QuerySnapshot).docs) {
+        screeningDocs[doc.id] = doc;
+      }
+
+      for (final doc
+          in (results[5] as QuerySnapshot).docs) {
+        screeningDocs[doc.id] = doc;
+      }
+
+      // Donations
+      for (final doc
+          in (results[6] as QuerySnapshot).docs) {
+        donationDocs[doc.id] = doc;
+      }
+
+      for (final doc
+          in (results[7] as QuerySnapshot).docs) {
+        donationDocs[doc.id] = doc;
+      }
 
       // --------------------------------------------------------
-      // BOOKED DONORS
+      // BOOKED
       // --------------------------------------------------------
 
-      int booked = 0;
-
-      booked =
-          bookingSnapshot.docs.length +
-          walkInSnapshot.docs.length;
+      final int booked =
+          bookingDocs.length +
+          walkInDocs.length;
 
       // --------------------------------------------------------
-      // CHECKED-IN DONORS
+      // CHECKED IN
       // --------------------------------------------------------
 
       int checkedIn = 0;
 
-      // Normal bookings
-      for (final doc in bookingSnapshot.docs) {
-        final data = doc.data();
+      for (final doc in bookingDocs.values) {
+        final data =
+            doc.data() as Map<String, dynamic>;
 
         final status =
             data['status']
-                ?.toString()
-                .trim()
-                .toLowerCase() ??
-            '';
+                    ?.toString()
+                    .trim()
+                    .toLowerCase() ??
+                '';
 
         if (_isCheckedInStatus(status)) {
           checkedIn++;
         }
       }
 
-      // Walk-in donors
-      for (final doc in walkInSnapshot.docs) {
-        final data = doc.data();
+      for (final doc in walkInDocs.values) {
+        final data =
+            doc.data() as Map<String, dynamic>;
 
         final status =
             data['status']
-                ?.toString()
-                .trim()
-                .toLowerCase() ??
-            '';
+                    ?.toString()
+                    .trim()
+                    .toLowerCase() ??
+                '';
 
         if (_isCheckedInStatus(status)) {
           checkedIn++;
@@ -228,20 +293,21 @@ class _StaffHomePageState extends State<StaffHomePage> {
       }
 
       // --------------------------------------------------------
-      // DEFERRED DONORS
+      // DEFERRED
       // --------------------------------------------------------
 
       int deferred = 0;
 
-      for (final doc in screeningSnapshot.docs) {
-        final data = doc.data();
+      for (final doc in screeningDocs.values) {
+        final data =
+            doc.data() as Map<String, dynamic>;
 
         final status =
             data['screeningStatus']
-                ?.toString()
-                .trim()
-                .toLowerCase() ??
-            '';
+                    ?.toString()
+                    .trim()
+                    .toLowerCase() ??
+                '';
 
         if (status == 'deferred') {
           deferred++;
@@ -249,20 +315,21 @@ class _StaffHomePageState extends State<StaffHomePage> {
       }
 
       // --------------------------------------------------------
-      // COMPLETED DONATIONS
+      // COLLECTED
       // --------------------------------------------------------
 
       int collected = 0;
 
-      for (final doc in donationSnapshot.docs) {
-        final data = doc.data();
+      for (final doc in donationDocs.values) {
+        final data =
+            doc.data() as Map<String, dynamic>;
 
         final status =
             data['donationStatus']
-                ?.toString()
-                .trim()
-                .toLowerCase() ??
-            '';
+                    ?.toString()
+                    .trim()
+                    .toLowerCase() ??
+                '';
 
         if (status == 'completed') {
           collected++;
@@ -286,25 +353,22 @@ class _StaffHomePageState extends State<StaffHomePage> {
         errorMessage =
             'Unable to load dashboard data.';
       });
+
+      debugPrint(
+        'Staff dashboard error: $e',
+      );
     }
   }
 
-  // ==========================================================
-  // CHECK-IN STATUS HELPER
-  // ==========================================================
-
   bool _isCheckedInStatus(String status) {
-    return status == 'checked in' ||
+    return status == 'confirmed' ||
+        status == 'checked in' ||
         status == 'checked_in' ||
         status == 'screening' ||
         status == 'screening passed' ||
         status == 'passed' ||
         status == 'deferred';
   }
-
-  // ==========================================================
-  // HOME PAGE
-  // ==========================================================
 
   @override
   Widget build(BuildContext context) {
@@ -329,7 +393,6 @@ class _StaffHomePageState extends State<StaffHomePage> {
               Icons.notifications_none,
               color: Colors.black,
             ),
-
             onPressed: () {
               Navigator.push(
                 context,
@@ -350,13 +413,10 @@ class _StaffHomePageState extends State<StaffHomePage> {
           physics:
               const AlwaysScrollableScrollPhysics(),
 
-          padding: const EdgeInsets.all(20),
+          padding:
+              const EdgeInsets.all(20),
 
           children: [
-            // ==================================================
-            // WELCOME SECTION
-            // ==================================================
-
             const Text(
               'Welcome, Camp Staff 👋',
               style: TextStyle(
@@ -377,22 +437,13 @@ class _StaffHomePageState extends State<StaffHomePage> {
 
             const SizedBox(height: 20),
 
-            // ==================================================
-            // TODAY'S CAMP CARD
-            // ==================================================
-
             _todayCampCard(),
 
             const SizedBox(height: 20),
 
-            // ==================================================
-            // OVERVIEW TITLE
-            // ==================================================
-
             Row(
               mainAxisAlignment:
                   MainAxisAlignment.spaceBetween,
-
               children: [
                 const Text(
                   'Overview',
@@ -403,10 +454,12 @@ class _StaffHomePageState extends State<StaffHomePage> {
                 ),
 
                 IconButton(
-                  onPressed: loadDashboardData,
+                  onPressed:
+                      loadDashboardData,
                   icon: const Icon(
                     Icons.refresh,
-                    color: Color(0xFF0867B2),
+                    color:
+                        Color(0xFF0867B2),
                   ),
                 ),
               ],
@@ -414,33 +467,27 @@ class _StaffHomePageState extends State<StaffHomePage> {
 
             const SizedBox(height: 10),
 
-            // ==================================================
-            // ERROR MESSAGE
-            // ==================================================
-
             if (errorMessage.isNotEmpty)
               Container(
                 margin:
-                    const EdgeInsets.only(bottom: 15),
-
+                    const EdgeInsets.only(
+                  bottom: 15,
+                ),
                 padding:
                     const EdgeInsets.all(15),
-
                 decoration: BoxDecoration(
                   color: Colors.red.shade50,
                   borderRadius:
                       BorderRadius.circular(12),
                 ),
-
                 child: Row(
                   children: [
                     Icon(
                       Icons.error_outline,
-                      color: Colors.red.shade700,
+                      color:
+                          Colors.red.shade700,
                     ),
-
                     const SizedBox(width: 10),
-
                     Expanded(
                       child: Text(
                         errorMessage,
@@ -450,21 +497,15 @@ class _StaffHomePageState extends State<StaffHomePage> {
                         ),
                       ),
                     ),
-
                     TextButton(
                       onPressed:
                           loadDashboardData,
-                      child: const Text(
-                        'Try Again',
-                      ),
+                      child:
+                          const Text('Try Again'),
                     ),
                   ],
                 ),
               ),
-
-            // ==================================================
-            // OVERVIEW CARDS
-            // ==================================================
 
             if (isLoading)
               const Center(
@@ -479,10 +520,6 @@ class _StaffHomePageState extends State<StaffHomePage> {
               _overviewCards(),
 
             const SizedBox(height: 25),
-
-            // ==================================================
-            // QUICK ACTIONS
-            // ==================================================
 
             const Text(
               'Quick Actions',
@@ -520,7 +557,9 @@ class _StaffHomePageState extends State<StaffHomePage> {
                   context,
                   MaterialPageRoute(
                     builder: (context) =>
-                        const WalkInDonorScreen(),
+                        const WalkInDonorScreen(
+                      campId: 'camp 7',
+                    ),
                   ),
                 );
               },
@@ -559,7 +598,8 @@ class _StaffHomePageState extends State<StaffHomePage> {
             ),
 
             _actionButton(
-              icon: Icons.assignment_turned_in,
+              icon:
+                  Icons.assignment_turned_in,
               title: 'End-of-Shift List',
               subtitle:
                   'Review and complete your shift',
@@ -580,10 +620,6 @@ class _StaffHomePageState extends State<StaffHomePage> {
       ),
     );
   }
-
-  // ============================================================
-  // OVERVIEW CARDS
-  // ============================================================
 
   Widget _overviewCards() {
     return Column(
@@ -620,7 +656,8 @@ class _StaffHomePageState extends State<StaffHomePage> {
               child: _statCard(
                 Icons.bloodtype,
                 'Collected',
-                collectedDonations.toString(),
+                collectedDonations
+                    .toString(),
                 const Color(0xFFE91E2B),
               ),
             ),
@@ -641,30 +678,24 @@ class _StaffHomePageState extends State<StaffHomePage> {
     );
   }
 
-  // ============================================================
-  // TODAY'S CAMP CARD
-  // ============================================================
-
   Widget _todayCampCard() {
     return Container(
-      padding: const EdgeInsets.all(18),
-
+      padding:
+          const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
+        gradient:
+            const LinearGradient(
           colors: [
             Color(0xFF0867B2),
             Color(0xFF0B82D8),
           ],
         ),
-
         borderRadius:
             BorderRadius.circular(18),
       ),
-
       child: Column(
         crossAxisAlignment:
             CrossAxisAlignment.start,
-
         children: [
           const Text(
             "Today's Camp",
@@ -694,11 +725,9 @@ class _StaffHomePageState extends State<StaffHomePage> {
                 color: Colors.white,
                 size: 18,
               ),
-
               SizedBox(width: 6),
-
               Text(
-                'Lahore Campus',
+                'Camp 7',
                 style: TextStyle(
                   color: Colors.white,
                 ),
@@ -715,9 +744,7 @@ class _StaffHomePageState extends State<StaffHomePage> {
                 color: Colors.white,
                 size: 18,
               ),
-
               SizedBox(width: 6),
-
               Text(
                 '09:00 AM - 05:00 PM',
                 style: TextStyle(
@@ -731,10 +758,6 @@ class _StaffHomePageState extends State<StaffHomePage> {
     );
   }
 
-  // ============================================================
-  // STAT CARD
-  // ============================================================
-
   Widget _statCard(
     IconData icon,
     String title,
@@ -744,33 +767,27 @@ class _StaffHomePageState extends State<StaffHomePage> {
     return Container(
       padding:
           const EdgeInsets.all(16),
-
       decoration: BoxDecoration(
         color: Colors.white,
-
         borderRadius:
             BorderRadius.circular(14),
-
         boxShadow: [
           BoxShadow(
-            color:
-                Colors.black.withOpacity(0.06),
+            color: Colors.black
+                .withOpacity(0.06),
             blurRadius: 8,
             offset:
                 const Offset(0, 3),
           ),
         ],
-
         border: Border.all(
           color:
               Colors.grey.shade200,
         ),
       ),
-
       child: Column(
         crossAxisAlignment:
             CrossAxisAlignment.start,
-
         children: [
           Icon(
             icon,
@@ -784,7 +801,8 @@ class _StaffHomePageState extends State<StaffHomePage> {
             value,
             style: const TextStyle(
               fontSize: 24,
-              fontWeight: FontWeight.bold,
+              fontWeight:
+                  FontWeight.bold,
             ),
           ),
 
@@ -802,10 +820,6 @@ class _StaffHomePageState extends State<StaffHomePage> {
     );
   }
 
-  // ============================================================
-  // ACTION BUTTON
-  // ============================================================
-
   Widget _actionButton({
     required IconData icon,
     required String title,
@@ -814,47 +828,41 @@ class _StaffHomePageState extends State<StaffHomePage> {
   }) {
     return Container(
       margin:
-          const EdgeInsets.only(bottom: 12),
-
+          const EdgeInsets.only(
+        bottom: 12,
+      ),
       child: Material(
         color: Colors.white,
-
         borderRadius:
             BorderRadius.circular(14),
-
         child: InkWell(
           borderRadius:
               BorderRadius.circular(14),
-
           onTap: onTap,
-
           child: Container(
             padding:
                 const EdgeInsets.all(16),
-
-            decoration: BoxDecoration(
+            decoration:
+                BoxDecoration(
               borderRadius:
                   BorderRadius.circular(14),
-
               border: Border.all(
                 color:
                     Colors.grey.shade200,
               ),
             ),
-
             child: Row(
               children: [
                 Container(
                   padding:
                       const EdgeInsets.all(12),
-
-                  decoration: BoxDecoration(
+                  decoration:
+                      BoxDecoration(
                     color:
                         const Color(0xFFE8F2FA),
                     borderRadius:
                         BorderRadius.circular(12),
                   ),
-
                   child: Icon(
                     icon,
                     color:
@@ -868,7 +876,6 @@ class _StaffHomePageState extends State<StaffHomePage> {
                   child: Column(
                     crossAxisAlignment:
                         CrossAxisAlignment.start,
-
                     children: [
                       Text(
                         title,
@@ -920,7 +927,6 @@ class StaffRosterPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-
       appBar: AppBar(
         title: const Text(
           'Donor Roster',
@@ -928,25 +934,23 @@ class StaffRosterPage extends StatelessWidget {
             fontWeight: FontWeight.bold,
           ),
         ),
-
         backgroundColor: Colors.white,
         foregroundColor: Colors.black,
         elevation: 0,
       ),
-
       body: Padding(
-        padding: const EdgeInsets.all(20),
-
+        padding:
+            const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment:
               CrossAxisAlignment.start,
-
           children: [
             const Text(
               'Today’s Donor Roster',
               style: TextStyle(
                 fontSize: 22,
-                fontWeight: FontWeight.bold,
+                fontWeight:
+                    FontWeight.bold,
               ),
             ),
 
@@ -963,8 +967,8 @@ class StaffRosterPage extends StatelessWidget {
 
             SizedBox(
               width: double.infinity,
-
-              child: ElevatedButton.icon(
+              child:
+                  ElevatedButton.icon(
                 onPressed: () {
                   Navigator.push(
                     context,
@@ -974,15 +978,11 @@ class StaffRosterPage extends StatelessWidget {
                     ),
                   );
                 },
-
-                icon: const Icon(
-                  Icons.people,
-                ),
-
+                icon:
+                    const Icon(Icons.people),
                 label: const Text(
                   'Open Donor Roster',
                 ),
-
                 style:
                     ElevatedButton.styleFrom(
                   backgroundColor:
@@ -1007,14 +1007,14 @@ class StaffRosterPage extends StatelessWidget {
 // STAFF DONATION PAGE
 // ============================================================
 
-class StaffDonationPage extends StatelessWidget {
+class StaffDonationPage
+    extends StatelessWidget {
   const StaffDonationPage({super.key});
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-
       appBar: AppBar(
         title: const Text(
           'Donation Records',
@@ -1022,25 +1022,23 @@ class StaffDonationPage extends StatelessWidget {
             fontWeight: FontWeight.bold,
           ),
         ),
-
         backgroundColor: Colors.white,
         foregroundColor: Colors.black,
         elevation: 0,
       ),
-
       body: Padding(
-        padding: const EdgeInsets.all(20),
-
+        padding:
+            const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment:
               CrossAxisAlignment.start,
-
           children: [
             const Text(
               'Donation Records',
               style: TextStyle(
                 fontSize: 22,
-                fontWeight: FontWeight.bold,
+                fontWeight:
+                    FontWeight.bold,
               ),
             ),
 
@@ -1057,8 +1055,8 @@ class StaffDonationPage extends StatelessWidget {
 
             SizedBox(
               width: double.infinity,
-
-              child: ElevatedButton.icon(
+              child:
+                  ElevatedButton.icon(
                 onPressed: () {
                   Navigator.push(
                     context,
@@ -1068,15 +1066,12 @@ class StaffDonationPage extends StatelessWidget {
                     ),
                   );
                 },
-
                 icon: const Icon(
                   Icons.bloodtype,
                 ),
-
                 label: const Text(
                   'Open Donation Records',
                 ),
-
                 style:
                     ElevatedButton.styleFrom(
                   backgroundColor:
@@ -1098,7 +1093,7 @@ class StaffDonationPage extends StatelessWidget {
 }
 
 // ============================================================
-// STAFF PROFILE PAGE
+// STAFF PROFILE
 // ============================================================
 
 class StaffProfilePageInside
@@ -1111,7 +1106,6 @@ class StaffProfilePageInside
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-
       appBar: AppBar(
         title: const Text(
           'Staff Profile',
@@ -1119,26 +1113,21 @@ class StaffProfilePageInside
             fontWeight: FontWeight.bold,
           ),
         ),
-
         backgroundColor: Colors.white,
         foregroundColor: Colors.black,
         elevation: 0,
       ),
-
       body: ListView(
         padding:
             const EdgeInsets.all(20),
-
         children: [
           const SizedBox(height: 10),
 
           const Center(
             child: CircleAvatar(
               radius: 45,
-
               backgroundColor:
                   Color(0xFFE8F2FA),
-
               child: Icon(
                 Icons.person,
                 size: 50,
@@ -1155,7 +1144,8 @@ class StaffProfilePageInside
               'Camp Staff',
               style: TextStyle(
                 fontSize: 22,
-                fontWeight: FontWeight.bold,
+                fontWeight:
+                    FontWeight.bold,
               ),
             ),
           ),
@@ -1183,7 +1173,7 @@ class StaffProfilePageInside
           _profileItem(
             Icons.location_on,
             'Assigned Camp',
-            'Lahore Campus',
+            'Camp 7',
           ),
 
           _profileItem(
@@ -1203,19 +1193,17 @@ class StaffProfilePageInside
   ) {
     return Container(
       margin:
-          const EdgeInsets.only(bottom: 12),
-
+          const EdgeInsets.only(
+        bottom: 12,
+      ),
       padding:
           const EdgeInsets.all(16),
-
       decoration: BoxDecoration(
         color:
             const Color(0xFFF7F9FC),
-
         borderRadius:
             BorderRadius.circular(12),
       ),
-
       child: Row(
         children: [
           Icon(
@@ -1230,14 +1218,14 @@ class StaffProfilePageInside
             child: Column(
               crossAxisAlignment:
                   CrossAxisAlignment.start,
-
               children: [
                 Text(
                   title,
                   style:
                       const TextStyle(
                     fontSize: 12,
-                    color: Colors.grey,
+                    color:
+                        Colors.grey,
                   ),
                 ),
 
@@ -1262,7 +1250,7 @@ class StaffProfilePageInside
 }
 
 // ============================================================
-// STAFF NOTIFICATIONS SCREEN
+// STAFF NOTIFICATIONS
 // ============================================================
 
 class StaffNotificationsScreen
@@ -1271,8 +1259,6 @@ class StaffNotificationsScreen
     super.key,
   });
 
-  
-
   @override
   Widget build(BuildContext context) {
     final firestore =
@@ -1280,20 +1266,18 @@ class StaffNotificationsScreen
 
     return Scaffold(
       backgroundColor: Colors.white,
-
       appBar: AppBar(
         title: const Text(
           'Notifications',
           style: TextStyle(
-            fontWeight: FontWeight.bold,
+            fontWeight:
+                FontWeight.bold,
           ),
         ),
-
         backgroundColor: Colors.white,
         foregroundColor: Colors.black,
         elevation: 0,
       ),
-
       body: StreamBuilder<
           QuerySnapshot<Map<String, dynamic>>>(
         stream: firestore
@@ -1303,7 +1287,6 @@ class StaffNotificationsScreen
               isEqualTo: 'staff001',
             )
             .snapshots(),
-
         builder: (
           context,
           snapshot,
@@ -1332,16 +1315,13 @@ class StaffNotificationsScreen
               child: Column(
                 mainAxisAlignment:
                     MainAxisAlignment.center,
-
                 children: [
                   Icon(
                     Icons.notifications_none,
                     size: 60,
                     color: Colors.grey,
                   ),
-
                   SizedBox(height: 15),
-
                   Text(
                     'No notifications',
                     style: TextStyle(
@@ -1350,9 +1330,7 @@ class StaffNotificationsScreen
                           FontWeight.w600,
                     ),
                   ),
-
                   SizedBox(height: 5),
-
                   Text(
                     'You are all caught up.',
                     style: TextStyle(
@@ -1367,28 +1345,25 @@ class StaffNotificationsScreen
           return ListView.builder(
             padding:
                 const EdgeInsets.all(15),
-
             itemCount:
                 notifications.length,
-
             itemBuilder: (
               context,
               index,
             ) {
               final data =
-                  notifications[index].data();
+                  notifications[index]
+                      .data();
 
               return _NotificationCard(
                 title:
                     data['title']
                             ?.toString() ??
                         'Notification',
-
                 message:
                     data['message']
                             ?.toString() ??
                         '',
-
                 isRead:
                     data['isRead'] == true,
               );
@@ -1399,10 +1374,6 @@ class StaffNotificationsScreen
     );
   }
 }
-
-// ============================================================
-// NOTIFICATION CARD
-// ============================================================
 
 class _NotificationCard
     extends StatelessWidget {
@@ -1420,34 +1391,29 @@ class _NotificationCard
   Widget build(BuildContext context) {
     return Container(
       margin:
-          const EdgeInsets.only(bottom: 12),
-
+          const EdgeInsets.only(
+        bottom: 12,
+      ),
       padding:
           const EdgeInsets.all(16),
-
       decoration: BoxDecoration(
         color: isRead
             ? Colors.white
             : const Color(0xFFE8F2FA),
-
         borderRadius:
             BorderRadius.circular(14),
-
         border: Border.all(
           color:
               Colors.grey.shade200,
         ),
       ),
-
       child: Row(
         crossAxisAlignment:
             CrossAxisAlignment.start,
-
         children: [
           const CircleAvatar(
             backgroundColor:
                 Color(0xFFE8F2FA),
-
             child: Icon(
               Icons.notifications,
               color:
@@ -1461,7 +1427,6 @@ class _NotificationCard
             child: Column(
               crossAxisAlignment:
                   CrossAxisAlignment.start,
-
               children: [
                 Text(
                   title,
@@ -1479,7 +1444,8 @@ class _NotificationCard
                   message,
                   style:
                       const TextStyle(
-                    color: Colors.grey,
+                    color:
+                        Colors.grey,
                     fontSize: 13,
                   ),
                 ),

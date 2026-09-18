@@ -3,6 +3,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'register_screen.dart';
 import 'donor_home_screen.dart';
+import 'organizerHome.dart';
+import 'staff_dashboard.dart';
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
 
@@ -188,12 +190,12 @@ class _LoginScreenState extends State<LoginScreen> {
       } else if (role == 'staff') {
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (_) => const StaffDashboard()),
+          MaterialPageRoute(builder: (_) => const StaffDashboardScreen()),
         );
       } else if (role == 'organizer') {
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (_) => const OrganizerDashboard()),
+          MaterialPageRoute(builder: (_) => const OrganizerHome()),
         );
       } else {
         _showMessage('Invalid user role. Please contact administrator.');
@@ -645,29 +647,7 @@ class DonorDashboard extends StatelessWidget {
   }
 }
 
-class StaffDashboard extends StatelessWidget {
-  const StaffDashboard({super.key});
 
-  @override
-  Widget build(BuildContext context) {
-    return const SimpleDashboard(
-      title: 'Staff Dashboard',
-      message: 'Welcome, Staff!',
-    );
-  }
-}
-
-class OrganizerDashboard extends StatelessWidget {
-  const OrganizerDashboard({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return const SimpleDashboard(
-      title: 'Organizer Dashboard',
-      message: 'Welcome, Organizer!',
-    );
-  }
-}
 
 class SimpleDashboard extends StatelessWidget {
   final String title;

@@ -4,20 +4,28 @@ import 'package:flutter/material.dart';
 
 import 'booking_detail_screen.dart';
 
-class MyBookingsScreen extends StatefulWidget {
+class MyBookingsScreen
+    extends StatefulWidget {
   const MyBookingsScreen({super.key});
 
   @override
-  State<MyBookingsScreen> createState() => _MyBookingsScreenState();
+  State<MyBookingsScreen> createState() =>
+      _MyBookingsScreenState();
 }
 
-class _MyBookingsScreenState extends State<MyBookingsScreen>
+class _MyBookingsScreenState
+    extends State<MyBookingsScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
 
-  final Color blue = const Color(0xFF1565C0);
-  final Color darkBlue = const Color(0xFF0D47A1);
-  final Color red = const Color(0xFFE51C2A);
+  final Color blue =
+      const Color(0xFF1565C0);
+
+  final Color darkBlue =
+      const Color(0xFF0D47A1);
+
+  final Color red =
+      const Color(0xFFE51C2A);
 
   @override
   void initState() {
@@ -37,14 +45,16 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
 
   @override
   Widget build(BuildContext context) {
-    final User? user = FirebaseAuth.instance.currentUser;
+    final User? user =
+        FirebaseAuth.instance.currentUser;
 
     if (user == null) {
       return const Scaffold(
         body: Center(
           child: Text(
             'Please login first.',
-            style: TextStyle(fontSize: 16),
+            style:
+                TextStyle(fontSize: 16),
           ),
         ),
       );
@@ -53,15 +63,12 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
     return Scaffold(
       backgroundColor: Colors.white,
 
-      // ----------------------------------------------------------
-      // APP BAR
-      // ----------------------------------------------------------
-
       appBar: AppBar(
         title: const Text(
           'My Bookings',
           style: TextStyle(
-            fontWeight: FontWeight.bold,
+            fontWeight:
+                FontWeight.bold,
             color: Colors.white,
           ),
         ),
@@ -69,39 +76,29 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
         foregroundColor: Colors.white,
         elevation: 0,
 
-        // --------------------------------------------------------
-        // TABS
-        // --------------------------------------------------------
-
         bottom: TabBar(
           controller: _tabController,
           isScrollable: true,
-          indicatorColor: Colors.white,
+          indicatorColor:
+              Colors.white,
           indicatorWeight: 3,
-          labelColor: Colors.white,
-          unselectedLabelColor: Colors.white70,
+          labelColor:
+              Colors.white,
+          unselectedLabelColor:
+              Colors.white70,
 
           tabs: const [
-            Tab(
-              text: 'Upcoming',
-            ),
-            Tab(
-              text: 'Check-in',
-            ),
-            Tab(
-              text: 'Completed',
-            ),
-            
+            Tab(text: 'Upcoming'),
+            Tab(text: 'Check-in'),
+            Tab(text: 'Completed'),
           ],
         ),
       ),
 
-      // ----------------------------------------------------------
-      // BODY
-      // ----------------------------------------------------------
-
-      body: StreamBuilder<QuerySnapshot>(
-        stream: FirebaseFirestore.instance
+      body:
+          StreamBuilder<QuerySnapshot>(
+        stream: FirebaseFirestore
+            .instance
             .collection('bookings')
             .where(
               'donorId',
@@ -109,54 +106,62 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
             )
             .snapshots(),
 
-        builder: (context, snapshot) {
-          // Loading
+        builder: (
+          context,
+          snapshot,
+        ) {
           if (snapshot.connectionState ==
               ConnectionState.waiting) {
             return Center(
-              child: CircularProgressIndicator(
+              child:
+                  CircularProgressIndicator(
                 color: blue,
               ),
             );
           }
 
-          // Error
           if (snapshot.hasError) {
             return Center(
               child: Padding(
-                padding: const EdgeInsets.all(20),
+                padding:
+                    const EdgeInsets.all(20),
                 child: Text(
-                  'Something went wrong.\n\n${snapshot.error}',
-                  textAlign: TextAlign.center,
+                  'Something went wrong.\n\n'
+                  '${snapshot.error}',
+                  textAlign:
+                      TextAlign.center,
                 ),
               ),
             );
           }
 
-          final documents = snapshot.data?.docs ?? [];
+          final documents =
+              snapshot.data?.docs ?? [];
 
           return TabBarView(
-            controller: _tabController,
+            controller:
+                _tabController,
+
             children: [
-              // UPCOMING
               _buildBookingList(
                 documents,
                 ['Upcoming'],
               ),
 
-              // CHECK-IN
               _buildBookingList(
                 documents,
-                ['Confirmed'],
+                [
+                  'Confirmed',
+                  'Checked in',
+                  'Screening Passed',
+                  'Passed',
+                ],
               ),
 
-              // COMPLETED
               _buildBookingList(
                 documents,
                 ['Completed'],
               ),
-
-             
             ],
           );
         },
@@ -164,36 +169,53 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
     );
   }
 
-  // ============================================================
-  // BOOKING LIST
-  // ============================================================
-
   Widget _buildBookingList(
-    List<QueryDocumentSnapshot> documents,
+    List<QueryDocumentSnapshot>
+        documents,
     List<String> allowedStatuses,
   ) {
-    final filteredBookings = documents.where((document) {
+    final filteredBookings =
+        documents.where((document) {
       final data =
-          document.data() as Map<String, dynamic>;
+          document.data()
+              as Map<String, dynamic>;
 
       final status =
-          data['status']?.toString() ?? 'Upcoming';
+          data['status']
+                  ?.toString()
+                  .trim() ??
+              'Upcoming';
 
-      return allowedStatuses.contains(status);
+      return allowedStatuses
+          .map(
+            (e) => e.toLowerCase(),
+          )
+          .contains(
+            status.toLowerCase(),
+          );
     }).toList();
 
     if (filteredBookings.isEmpty) {
-      return _buildEmptyState(allowedStatuses);
+      return _buildEmptyState(
+        allowedStatuses,
+      );
     }
 
     return ListView.builder(
-      padding: const EdgeInsets.all(16),
-      itemCount: filteredBookings.length,
-      itemBuilder: (context, index) {
-        final booking = filteredBookings[index];
+      padding:
+          const EdgeInsets.all(16),
+      itemCount:
+          filteredBookings.length,
+      itemBuilder: (
+        context,
+        index,
+      ) {
+        final booking =
+            filteredBookings[index];
 
         final data =
-            booking.data() as Map<String, dynamic>;
+            booking.data()
+                as Map<String, dynamic>;
 
         return _buildBookingCard(
           context,
@@ -203,10 +225,6 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
       },
     );
   }
-
-  // ============================================================
-  // BOOKING CARD
-  // ============================================================
 
   Widget _buildBookingCard(
     BuildContext context,
@@ -230,42 +248,42 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
             'Location not available';
 
     final String bloodGroup =
-        data['bloodGroup']?.toString() ?? '';
+        data['bloodGroup']?.toString() ??
+            '';
 
     final String status =
         data['status']?.toString() ??
             'Upcoming';
 
     return Card(
-      margin: const EdgeInsets.only(bottom: 16),
-      elevation: 3,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
+      margin:
+          const EdgeInsets.only(
+        bottom: 16,
       ),
-
+      elevation: 3,
+      shape:
+          RoundedRectangleBorder(
+        borderRadius:
+            BorderRadius.circular(16),
+      ),
       child: Padding(
-        padding: const EdgeInsets.all(16),
-
+        padding:
+            const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment:
               CrossAxisAlignment.start,
-
           children: [
-            // ----------------------------------------------------
-            // CAMP NAME + STATUS
-            // ----------------------------------------------------
-
             Row(
               crossAxisAlignment:
                   CrossAxisAlignment.start,
-
               children: [
                 Expanded(
                   child: Text(
                     campName,
                     style: TextStyle(
                       fontSize: 18,
-                      fontWeight: FontWeight.bold,
+                      fontWeight:
+                          FontWeight.bold,
                       color: darkBlue,
                     ),
                   ),
@@ -273,15 +291,13 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
 
                 const SizedBox(width: 8),
 
-                _buildStatusBadge(status),
+                _buildStatusBadge(
+                  status,
+                ),
               ],
             ),
 
             const SizedBox(height: 16),
-
-            // ----------------------------------------------------
-            // DATE
-            // ----------------------------------------------------
 
             _buildInfoRow(
               Icons.calendar_today,
@@ -291,10 +307,6 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
 
             const SizedBox(height: 10),
 
-            // ----------------------------------------------------
-            // TIME
-            // ----------------------------------------------------
-
             _buildInfoRow(
               Icons.access_time,
               'Time',
@@ -303,19 +315,11 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
 
             const SizedBox(height: 10),
 
-            // ----------------------------------------------------
-            // LOCATION
-            // ----------------------------------------------------
-
             _buildInfoRow(
               Icons.location_on,
               'Location',
               location,
             ),
-
-            // ----------------------------------------------------
-            // BLOOD GROUP
-            // ----------------------------------------------------
 
             if (bloodGroup.isNotEmpty) ...[
               const SizedBox(height: 10),
@@ -329,41 +333,42 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
 
             const SizedBox(height: 16),
 
-            // ----------------------------------------------------
-            // VIEW DETAILS
-            // ----------------------------------------------------
-
             SizedBox(
               width: double.infinity,
               height: 45,
-
-              child: ElevatedButton(
+              child:
+                  ElevatedButton(
                 onPressed: () {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
                       builder: (_) =>
                           BookingDetailScreen(
-                        bookingId: bookingId,
+                        bookingId:
+                            bookingId,
                       ),
                     ),
                   );
                 },
-
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: blue,
-                  foregroundColor: Colors.white,
-
-                  shape: RoundedRectangleBorder(
+                style:
+                    ElevatedButton.styleFrom(
+                  backgroundColor:
+                      blue,
+                  foregroundColor:
+                      Colors.white,
+                  shape:
+                      RoundedRectangleBorder(
                     borderRadius:
-                        BorderRadius.circular(10),
+                        BorderRadius.circular(
+                            10),
                   ),
                 ),
-
-                child: const Text(
+                child:
+                    const Text(
                   'View Booking Details',
                   style: TextStyle(
-                    fontWeight: FontWeight.bold,
+                    fontWeight:
+                        FontWeight.bold,
                   ),
                 ),
               ),
@@ -374,10 +379,6 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
     );
   }
 
-  // ============================================================
-  // INFO ROW
-  // ============================================================
-
   Widget _buildInfoRow(
     IconData icon,
     String title,
@@ -386,7 +387,6 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
     return Row(
       crossAxisAlignment:
           CrossAxisAlignment.start,
-
       children: [
         Icon(
           icon,
@@ -398,16 +398,20 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
 
         Text(
           '$title: ',
-          style: const TextStyle(
-            fontWeight: FontWeight.bold,
+          style:
+              const TextStyle(
+            fontWeight:
+                FontWeight.bold,
           ),
         ),
 
         Expanded(
           child: Text(
             value,
-            style: const TextStyle(
-              color: Colors.black87,
+            style:
+                const TextStyle(
+              color:
+                  Colors.black87,
             ),
           ),
         ),
@@ -415,20 +419,23 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
     );
   }
 
-  // ============================================================
-  // STATUS BADGE
-  // ============================================================
-
-  Widget _buildStatusBadge(String status) {
+  Widget _buildStatusBadge(
+    String status,
+  ) {
     Color statusColor;
 
     switch (status.toLowerCase()) {
       case 'confirmed':
-        statusColor = Colors.green;
+      case 'checked in':
+      case 'screening passed':
+      case 'passed':
+        statusColor =
+            Colors.green;
         break;
 
       case 'completed':
-        statusColor = Colors.teal;
+        statusColor =
+            Colors.teal;
         break;
 
       case 'cancelled':
@@ -436,41 +443,40 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
         break;
 
       case 'no-show':
-        statusColor = Colors.grey;
+        statusColor =
+            Colors.grey;
         break;
 
-      case 'upcoming':
       default:
         statusColor = blue;
-        break;
     }
 
     return Container(
-      padding: const EdgeInsets.symmetric(
+      padding:
+          const EdgeInsets.symmetric(
         horizontal: 10,
         vertical: 6,
       ),
-
-      decoration: BoxDecoration(
-        color: statusColor.withOpacity(0.1),
+      decoration:
+          BoxDecoration(
+        color:
+            statusColor.withOpacity(
+                0.1),
         borderRadius:
-            BorderRadius.circular(20),
+            BorderRadius.circular(
+                20),
       ),
-
       child: Text(
         status,
         style: TextStyle(
           color: statusColor,
           fontSize: 12,
-          fontWeight: FontWeight.bold,
+          fontWeight:
+              FontWeight.bold,
         ),
       ),
     );
   }
-
-  // ============================================================
-  // EMPTY STATE
-  // ============================================================
 
   Widget _buildEmptyState(
     List<String> statuses,
@@ -478,37 +484,38 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
     String title;
     String message;
 
-    if (statuses.contains('Upcoming')) {
-      title = 'No Upcoming Bookings';
+    if (statuses.contains(
+        'Upcoming')) {
+      title =
+          'No Upcoming Bookings';
       message =
           'You have no upcoming blood camp bookings.';
-    } else if (statuses.contains('Confirmed')) {
-      title = 'No Check-in Yet';
+    } else if (statuses.contains(
+        'Confirmed')) {
+      title =
+          'No Check-in Yet';
       message =
           'Your confirmed check-ins will appear here.';
-    } else if (statuses.contains('Completed')) {
-      title = 'No Completed Donations';
+    } else {
+      title =
+          'No Completed Donations';
       message =
           'Your completed donations will appear here.';
-    } else {
-      title = 'No History';
-      message =
-          'Cancelled and no-show bookings will appear here.';
     }
 
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(30),
-
+        padding:
+            const EdgeInsets.all(30),
         child: Column(
           mainAxisAlignment:
               MainAxisAlignment.center,
-
           children: [
             Icon(
               Icons.event_note,
               size: 75,
-              color: Colors.grey.shade400,
+              color:
+                  Colors.grey.shade400,
             ),
 
             const SizedBox(height: 20),
@@ -517,7 +524,8 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
               title,
               style: TextStyle(
                 fontSize: 21,
-                fontWeight: FontWeight.bold,
+                fontWeight:
+                    FontWeight.bold,
                 color: darkBlue,
               ),
             ),
@@ -526,10 +534,12 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
 
             Text(
               message,
-              textAlign: TextAlign.center,
+              textAlign:
+                  TextAlign.center,
               style: TextStyle(
                 fontSize: 14,
-                color: Colors.grey.shade600,
+                color:
+                    Colors.grey.shade600,
               ),
             ),
           ],

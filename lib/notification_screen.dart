@@ -11,15 +11,10 @@ class NotificationScreen extends StatelessWidget {
     const Color darkBlue = Color(0xFF0D47A1);
     const Color red = Color(0xFFE51C2A);
 
-    final User? currentUser =
-        FirebaseAuth.instance.currentUser;
+    final User? currentUser = FirebaseAuth.instance.currentUser;
 
     if (currentUser == null) {
-      return const Scaffold(
-        body: Center(
-          child: Text('Please login first.'),
-        ),
-      );
+      return const Scaffold(body: Center(child: Text('Please login first.')));
     }
 
     return Scaffold(
@@ -28,47 +23,38 @@ class NotificationScreen extends StatelessWidget {
       // ============================================================
       // APP BAR
       // ============================================================
-
       appBar: AppBar(
         backgroundColor: blue,
         foregroundColor: Colors.white,
         elevation: 0,
-
         title: const Text(
           'Notifications',
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-          ),
+          style: TextStyle(fontWeight: FontWeight.bold),
         ),
       ),
 
       // ============================================================
       // NOTIFICATIONS
       // ============================================================
-
-      body: StreamBuilder<QuerySnapshot>(
+      body: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
         stream: FirebaseFirestore.instance
             .collection('notifications')
-            .where(
-              'userId',
-              isEqualTo: currentUser.uid,
-            )
-            .orderBy(
-              'createdAt',
-              descending: true,
-            )
+            .where('userId', isEqualTo: currentUser.uid)
             .snapshots(),
 
         builder: (context, snapshot) {
-          // Loading
-          if (snapshot.connectionState ==
-              ConnectionState.waiting) {
-            return const Center(
-              child: CircularProgressIndicator(),
-            );
+          // ========================================================
+          // LOADING
+          // ========================================================
+
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
           }
 
-          // Error
+          // ========================================================
+          // ERROR
+          // ========================================================
+
           if (snapshot.hasError) {
             return Center(
               child: Padding(
@@ -76,27 +62,22 @@ class NotificationScreen extends StatelessWidget {
                 child: Text(
                   'Could not load notifications.\n\n${snapshot.error}',
                   textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    fontSize: 15,
-                  ),
+                  style: const TextStyle(fontSize: 15),
                 ),
               ),
             );
           }
 
-          // No notifications
-          if (!snapshot.hasData ||
-              snapshot.data!.docs.isEmpty) {
+          // ========================================================
+          // NO NOTIFICATIONS
+          // ========================================================
+
+          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
             return const Center(
               child: Column(
-                mainAxisAlignment:
-                    MainAxisAlignment.center,
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(
-                    Icons.notifications_none,
-                    size: 70,
-                    color: Colors.grey,
-                  ),
+                  Icon(Icons.notifications_none, size: 70, color: Colors.grey),
                   SizedBox(height: 15),
                   Text(
                     'No notifications',
@@ -109,52 +90,64 @@ class NotificationScreen extends StatelessWidget {
                   SizedBox(height: 5),
                   Text(
                     'You are all caught up!',
-                    style: TextStyle(
-                      color: Colors.grey,
-                    ),
+                    style: TextStyle(color: Colors.grey),
                   ),
                 ],
               ),
             );
           }
 
-          final notifications =
-              snapshot.data!.docs;
+          // ========================================================
+          // GET NOTIFICATIONS
+          // ========================================================
+
+          final notifications = [...snapshot.data!.docs];
+
+          // Sort newest first inside Flutter.
+          notifications.sort((a, b) {
+            final Timestamp? aTime = a.data()['createdAt'] as Timestamp?;
+
+            final Timestamp? bTime = b.data()['createdAt'] as Timestamp?;
+
+            if (aTime == null && bTime == null) {
+              return 0;
+            }
+
+            if (aTime == null) {
+              return 1;
+            }
+
+            if (bTime == null) {
+              return -1;
+            }
+
+            return bTime.compareTo(aTime);
+          });
+
+          // ========================================================
+          // LIST
+          // ========================================================
 
           return ListView.builder(
             padding: const EdgeInsets.all(16),
-
             itemCount: notifications.length,
-
             itemBuilder: (context, index) {
-              final DocumentSnapshot document =
-                  notifications[index];
+              final document = notifications[index];
 
-              final data =
-                  document.data()
-                      as Map<String, dynamic>;
+              final data = document.data();
 
-              final String title =
-                  data['title']?.toString() ??
-                      'Notification';
+              final String title = data['title']?.toString() ?? 'Notification';
 
-              final String message =
-                  data['message']?.toString() ??
-                      '';
+              final String message = data['message']?.toString() ?? '';
 
-              final String type =
-                  data['type']?.toString() ??
-                      'general';
+              final String type = data['type']?.toString() ?? 'general';
 
-              final bool isRead =
-                  data['isRead'] == true;
+              final bool isRead = data['isRead'] == true;
 
               DateTime? createdAt;
 
               if (data['createdAt'] is Timestamp) {
-                createdAt =
-                    (data['createdAt'] as Timestamp)
-                        .toDate();
+                createdAt = (data['createdAt'] as Timestamp).toDate();
               }
 
               return _buildNotificationCard(
@@ -218,31 +211,34 @@ class NotificationScreen extends StatelessWidget {
     return GestureDetector(
       onTap: () async {
         if (!isRead) {
-          await FirebaseFirestore.instance
-              .collection('notifications')
-              .doc(documentId)
-              .update({
-            'isRead': true,
-          });
+          try {
+            await FirebaseFirestore.instance
+                .collection('notifications')
+                .doc(documentId)
+                .update({'isRead': true});
+          } catch (e) {
+            if (context.mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Unable to mark notification as read: $e'),
+                ),
+              );
+            }
+          }
         }
       },
 
       child: Container(
         margin: const EdgeInsets.only(bottom: 12),
-
         padding: const EdgeInsets.all(16),
 
         decoration: BoxDecoration(
-          color: isRead
-              ? Colors.white
-              : const Color(0xFFEAF3FF),
+          color: isRead ? Colors.white : const Color(0xFFEAF3FF),
 
           borderRadius: BorderRadius.circular(16),
 
           border: Border.all(
-            color: isRead
-                ? const Color(0xFFE0E0E0)
-                : blue,
+            color: isRead ? const Color(0xFFE0E0E0) : blue,
             width: isRead ? 1 : 1.2,
           ),
 
@@ -256,11 +252,9 @@ class NotificationScreen extends StatelessWidget {
         ),
 
         child: Row(
-          crossAxisAlignment:
-              CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.start,
 
           children: [
-
             // ==================================================
             // ICON
             // ==================================================
@@ -274,11 +268,7 @@ class NotificationScreen extends StatelessWidget {
                 shape: BoxShape.circle,
               ),
 
-              child: Icon(
-                icon,
-                color: iconColor,
-                size: 26,
-              ),
+              child: Icon(icon, color: iconColor, size: 26),
             ),
 
             const SizedBox(width: 14),
@@ -286,17 +276,13 @@ class NotificationScreen extends StatelessWidget {
             // ==================================================
             // TEXT
             // ==================================================
-
             Expanded(
               child: Column(
-                crossAxisAlignment:
-                    CrossAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.start,
 
                 children: [
-
                   Row(
                     children: [
-
                       Expanded(
                         child: Text(
                           title,
@@ -316,8 +302,7 @@ class NotificationScreen extends StatelessWidget {
                           height: 9,
                           width: 9,
 
-                          decoration:
-                               BoxDecoration(
+                          decoration: BoxDecoration(
                             color: blue,
                             shape: BoxShape.circle,
                           ),
@@ -341,10 +326,7 @@ class NotificationScreen extends StatelessWidget {
                   if (createdAt != null)
                     Text(
                       _formatDateTime(createdAt),
-                      style: const TextStyle(
-                        color: Colors.grey,
-                        fontSize: 12,
-                      ),
+                      style: const TextStyle(color: Colors.grey, fontSize: 12),
                     ),
                 ],
               ),
@@ -360,19 +342,13 @@ class NotificationScreen extends StatelessWidget {
   // ============================================================
 
   static String _formatDateTime(DateTime date) {
-    final String day = date.day
-        .toString()
-        .padLeft(2, '0');
+    final String day = date.day.toString().padLeft(2, '0');
 
-    final String month = date.month
-        .toString()
-        .padLeft(2, '0');
+    final String month = date.month.toString().padLeft(2, '0');
 
-    final String hour =
-        date.hour.toString().padLeft(2, '0');
+    final String hour = date.hour.toString().padLeft(2, '0');
 
-    final String minute =
-        date.minute.toString().padLeft(2, '0');
+    final String minute = date.minute.toString().padLeft(2, '0');
 
     return '$day/$month/${date.year} • $hour:$minute';
   }
